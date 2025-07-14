@@ -1,27 +1,32 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title>Tab Content Viewer</title>
   <meta charset="UTF-8">
   <style>
     body {
       font-family: sans-serif;
-      width: 450px; /* Increased width for new controls */
-      max-height: 600px; /* Increased height */
+      width: 450px;
+      /* Increased width for new controls */
+      max-height: 600px;
+      /* Increased height */
       overflow-y: auto;
       margin: 0;
       padding: 10px;
     }
+
     h1 {
       font-size: 16px;
       margin-top: 0;
       margin-bottom: 10px;
     }
+
     h2 {
       font-size: 14px;
       margin: 15px 0 8px 0;
     }
-    
+
     /* Settings Section */
     #settingsSection {
       background: #f8f9fa;
@@ -30,6 +35,7 @@
       padding: 10px;
       margin-bottom: 15px;
     }
+
     #settingsToggle {
       background: none;
       border: none;
@@ -39,9 +45,11 @@
       padding: 0;
       text-decoration: underline;
     }
+
     #settingsContent {
       margin-top: 10px;
     }
+
     #apiKeyInput {
       width: 100%;
       padding: 6px;
@@ -51,7 +59,9 @@
       margin-bottom: 8px;
       box-sizing: border-box;
     }
-    #saveApiKeyBtn, #testApiKeyBtn {
+
+    #saveApiKeyBtn,
+    #testApiKeyBtn {
       background: #007bff;
       color: white;
       border: none;
@@ -61,26 +71,31 @@
       font-size: 12px;
       margin-right: 5px;
     }
-    #saveApiKeyBtn:hover, #testApiKeyBtn:hover {
+
+    #saveApiKeyBtn:hover,
+    #testApiKeyBtn:hover {
       background: #0056b3;
     }
+
     .status-message {
       font-size: 11px;
       margin-top: 5px;
       padding: 4px;
       border-radius: 3px;
     }
+
     .status-success {
       background: #d4edda;
       color: #155724;
       border: 1px solid #c3e6cb;
     }
+
     .status-error {
       background: #f8d7da;
       color: #721c24;
       border: 1px solid #f5c6cb;
     }
-    
+
     /* Tabs List */
     #tabsList {
       list-style-type: none;
@@ -90,22 +105,27 @@
       max-height: 120px;
       overflow-y: auto;
     }
+
     #tabsList li {
       padding: 8px;
       cursor: pointer;
       border-bottom: 1px solid #eee;
     }
+
     #tabsList li:hover {
       background-color: #f0f0f0;
     }
+
     #tabsList li:last-child {
       border-bottom: none;
     }
+
     .tab-title {
       font-weight: bold;
       display: block;
       margin-bottom: 3px;
     }
+
     .tab-url {
       font-size: 0.9em;
       color: #555;
@@ -114,7 +134,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    
+
     /* Controls */
     #controls {
       margin-bottom: 10px;
@@ -122,7 +142,10 @@
       gap: 8px;
       flex-wrap: wrap;
     }
-    #copyButton, #convertToMarkdownBtn, #viewToggleBtn {
+
+    #copyButton,
+    #convertToMarkdownBtn,
+    #viewToggleBtn {
       background: #28a745;
       color: white;
       border: none;
@@ -131,26 +154,32 @@
       cursor: pointer;
       font-size: 12px;
     }
+
     #convertToMarkdownBtn {
       background: #6f42c1;
     }
+
     #viewToggleBtn {
       background: #17a2b8;
     }
+
     #copyButton:hover {
       background: #218838;
     }
+
     #convertToMarkdownBtn:hover {
       background: #5a32a3;
     }
+
     #viewToggleBtn:hover {
       background: #138496;
     }
+
     button:disabled {
       background: #6c757d !important;
       cursor: not-allowed;
     }
-    
+
     /* Content Container */
     #tabContentContainer {
       border: 1px solid #ccc;
@@ -161,24 +190,26 @@
       word-wrap: break-word;
       background: white;
     }
+
     #tabContentContainer.markdown-view {
       font-family: system-ui, -apple-system, sans-serif;
       line-height: 1.6;
     }
-    
+
     /* Loading indicator */
     .loading {
       text-align: center;
       color: #666;
       font-style: italic;
     }
-    
+
     /* Hidden class */
     .hidden {
       display: none;
     }
   </style>
 </head>
+
 <body>
   <!-- Settings Section -->
   <div id="settingsSection">
@@ -205,7 +236,7 @@
   <div id="controls">
     <button id="copyButton" style="display: none;">Copy Text</button>
     <button id="convertToMarkdownBtn" style="display: none;">Convert to Markdown</button>
-    <button id="viewToggleBtn" style="display: none;">View: Raw Text</button>
+    <button id="viewToggleBtn" style="display: none;">View Markdown/button>
   </div>
   <div id="tabContentContainer">
     <p>Select a tab from the list above to view its content.</p>
@@ -214,6 +245,7 @@
   <script src="storage-utils.js"></script>
   <script src="gemini-api.js"></script>
   <script src="markdown-renderer.js"></script>
-  <script src="popup.js"></script>
+  <script src="sidepanel.js"></script>
 </body>
+
 </html>
