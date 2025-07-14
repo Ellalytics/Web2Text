@@ -1,12 +1,10 @@
-// popup.js
-
 document.addEventListener('DOMContentLoaded', () => {
   const tabsListElement = document.getElementById('tabsList');
   const tabContentContainerElement = document.getElementById('tabContentContainer');
   const copyButton = document.getElementById('copyButton');
   const convertToMarkdownBtn = document.getElementById('convertToMarkdownBtn');
   const viewToggleBtn = document.getElementById('viewToggleBtn');
-  
+
   // Settings elements
   const settingsToggle = document.getElementById('settingsToggle');
   const settingsContent = document.getElementById('settingsContent');
@@ -20,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentMarkdownText = '';
   let isMarkdownView = false;
   let currentApiKey = null;
+  let currentTabUrl = '';
 
   // Initialize the extension
   initializeExtension();
@@ -32,6 +31,18 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyInput.value = currentApiKey;
         showStatus('API key loaded', 'success');
       }
+
+      // Load last content
+      chrome.storage.local.get(['lastRawText', 'lastMarkdownText', 'lastTabUrl', 'isMarkdownView'], (result) => {
+        if (result.lastRawText) {
+          currentRawText = result.lastRawText;
+          currentMarkdownText = result.lastMarkdownText || '';
+          currentTabUrl = result.lastTabUrl || '';
+          isMarkdownView = result.isMarkdownView || false;
+          displayContent();
+          updateControlsVisibility();
+        }
+      });
     } catch (error) {
       console.error('Error initializing extension:', error);
     }
@@ -45,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save API key
   saveApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
-    
+
     if (!apiKey) {
       showStatus('Please enter an API key', 'error');
       return;
@@ -69,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Test API key
   testApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
-    
+
     if (!apiKey) {
       showStatus('Please enter an API key to test', 'error');
       return;
@@ -121,16 +132,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     convertToMarkdownBtn.disabled = true;
     convertToMarkdownBtn.textContent = 'Converting...';
-    
+
     try {
       currentMarkdownText = await convertTextToMarkdown(currentRawText, currentApiKey);
       showStatus('Content converted to markdown successfully', 'success');
-      
+
       // Switch to markdown view
       isMarkdownView = true;
+      chrome.storage.local.set({ lastMarkdownText: currentMarkdownText, isMarkdownView: isMarkdownView });
       displayContent();
       updateControlsVisibility();
-      
+
     } catch (error) {
       console.error('Error converting to markdown:', error);
       showStatus('Error converting to markdown: ' + error.message, 'error');
@@ -150,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showStatus(message, type) {
     apiKeyStatus.textContent = message;
     apiKeyStatus.className = `status-message status-${type}`;
-    
+
     // Auto-hide success messages after 3 seconds
     if (type === 'success') {
       setTimeout(() => {
@@ -246,12 +258,14 @@ document.addEventListener('DOMContentLoaded', () => {
         copyButton.style.display = 'none'; // Hide button while loading
 
         const tabId = parseInt(listItem.dataset.tabId, 10);
+        const clickedTab = tabs.find(t => t.id === tabId);
+        currentTabUrl = clickedTab ? clickedTab.url : '';
 
         // Check if tabId is valid
         if (isNaN(tabId)) {
-            console.error("Invalid tab ID:", listItem.dataset.tabId);
-            tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
-            return;
+          console.error("Invalid tab ID:", listItem.dataset.tabId);
+          tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
+          return;
         }
 
         // 3. Inject a function to get the text content into the selected tab
@@ -272,10 +286,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
               // 4. Store and display the retrieved text content
               const pageText = injectionResults[0].result;
-              currentRawText = pageText;
+              currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
               currentMarkdownText = ''; // Reset markdown content
               isMarkdownView = false; // Reset to raw text view
-              
+
+              // Save to local storage
+              chrome.storage.local.set({
+                lastRawText: currentRawText,
+                lastMarkdownText: '',
+                lastTabUrl: currentTabUrl,
+                isMarkdownView: false
+              });
+
               displayContent();
               updateControlsVisibility();
 

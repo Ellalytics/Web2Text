@@ -65,16 +65,18 @@ function createMarkdownConversionPrompt(text) {
   return `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
 
 INSTRUCTIONS:
-1. Remove all navigation menus, headers, footers, advertisements
-2. Extract all meaningful content from the text
-3. Structure the content with appropriate markdown headers (# ## ###)
-4. Preserve important Call To Actions (CTA) in the end under "CTA" to include "View Fees", "Enroll Now", "Read More", etc, even though links are not available. 
+1. Output the source URL in the beginning as a markdown link
+2. Remove all navigation menus, headers, footers, advertisements
+3. Extract all meaningful content from the text
+4. Structure the content with appropriate markdown headers (# ## ###)
 5. Format lists, quotes, and code blocks appropriately
 6. Remove repetitive or boilerplate text
 7. Maintain logical flow and readability
 8. If there are multiple articles or sections, separate them clearly
 9. Remove social media buttons, "share this" links, and similar UI elements
 10. Keep only the essential, valuable content that a reader would want
+11. In the end, add a "CTA in this page" section to include important call to actions, such as "View Fees", "Enroll Now", "Read More", etc. 
+
 INPUT TEXT:
 ${text}
 
