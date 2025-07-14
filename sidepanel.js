@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentRawText = '';
   let currentMarkdownText = '';
   let isMarkdownView = false;
-  let currentApiKey = null;
+  let llmApiKey = null;
   let currentTabUrl = '';
   let markdownData = {};
 
@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
   async function initializeExtension() {
     try {
       // Load saved API key
-      currentApiKey = await getApiKey();
-      if (currentApiKey) {
-        apiKeyInput.value = currentApiKey;
+      llmApiKey = await getApiKey();
+      if (llmApiKey) {
+        apiKeyInput.value = llmApiKey;
         showStatus('API key loaded', 'success');
       }
 
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       await saveApiKey(apiKey);
-      currentApiKey = apiKey;
+      llmApiKey = apiKey;
       showStatus('API key saved successfully', 'success');
       updateControlsVisibility();
     } catch (error) {
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Convert to markdown button
   convertToMarkdownBtn.addEventListener('click', async () => {
-    if (!currentApiKey) {
+    if (!llmApiKey) {
       showStatus('Please save a valid API key first', 'error');
       return;
     }
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     convertToMarkdownBtn.textContent = 'Converting...';
 
     try {
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, currentApiKey);
+      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey);
       showStatus('Content converted to markdown successfully', 'success');
 
       // Switch to markdown view
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateControlsVisibility() {
     const hasContent = currentRawText.length > 0;
     const hasMarkdown = currentMarkdownText.length > 0;
-    const hasApiKey = currentApiKey && currentApiKey.length > 0;
+    const hasApiKey = llmApiKey && llmApiKey.length > 0;
 
     copyButton.style.display = hasContent ? 'block' : 'none';
     convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update view toggle button text
     if (hasMarkdown) {
-      viewToggleBtn.textContent = isMarkdownView ? 'View: Markdown' : 'View: Raw Text';
+      viewToggleBtn.textContent = isMarkdownView ? 'View Raw Text' : 'View Markdown';
     }
 
     // Update copy button text
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
         copyButton.style.display = 'none'; // Hide button while loading
 
-        
+
         const clickedTab = tabs.find(t => t.id === tabId);
         currentTabUrl = clickedTab ? clickedTab.url : '';
 

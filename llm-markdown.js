@@ -1,4 +1,4 @@
-// gemini-api.js - Gemini API service for text-to-markdown conversion
+// llm-markdown.js - Gemini API service for text-to-markdown conversion
 
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
@@ -14,7 +14,7 @@ async function convertTextToMarkdown(text, apiKey) {
   }
 
   const prompt = createMarkdownConversionPrompt(text);
-  
+
   try {
     const response = await fetch(`${GEMINI_API_BASE_URL}?key=${apiKey}`, {
       method: 'POST',
@@ -42,7 +42,7 @@ async function convertTextToMarkdown(text, apiKey) {
     }
 
     const data = await response.json();
-    
+
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
       throw new Error('Invalid response format from Gemini API');
     }
@@ -65,7 +65,7 @@ function createMarkdownConversionPrompt(text) {
   return `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
 
 INSTRUCTIONS:
-1. Output the source URL in the beginning as a markdown link
+1. Output the source URL in the beginning as a markdown link "[Source URL](<URL>)"
 2. Remove all navigation menus, headers, footers, advertisements
 3. Extract all meaningful content from the text
 4. Structure the content with appropriate markdown headers (# ## ###)
