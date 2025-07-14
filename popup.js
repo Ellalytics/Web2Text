@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMarkdownView = false;
   let currentApiKey = null;
   let currentTabUrl = '';
+  let markdownData = {};
 
   // Initialize the extension
   initializeExtension();
@@ -33,12 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Load last content
-      chrome.storage.local.get(['lastRawText', 'lastMarkdownText', 'lastTabUrl', 'isMarkdownView'], (result) => {
+      chrome.storage.local.get(['lastRawText', 'markdownData', 'lastTabUrl', 'isMarkdownView'], (result) => {
         if (result.lastRawText) {
           currentRawText = result.lastRawText;
-          currentMarkdownText = result.lastMarkdownText || '';
+          markdownData = result.markdownData || {};
           currentTabUrl = result.lastTabUrl || '';
           isMarkdownView = result.isMarkdownView || false;
+
+          if (markdownData[currentTabUrl]) {
+            currentMarkdownText = markdownData[currentTabUrl];
+          } else {
+            currentMarkdownText = '';
+          }
+
           displayContent();
           updateControlsVisibility();
         }
@@ -139,7 +147,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Switch to markdown view
       isMarkdownView = true;
-      chrome.storage.local.set({ lastMarkdownText: currentMarkdownText, isMarkdownView: isMarkdownView });
+      markdownData[currentTabUrl] = currentMarkdownText;
+      chrome.storage.local.set({ markdownData: markdownData, isMarkdownView: isMarkdownView });
       displayContent();
       updateControlsVisibility();
 
@@ -236,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (tab.active) {
         listItem.style.color = 'red';
+        listItem.style.fontWeight = 'bold';
       }
 
       // Create an element to display the title
@@ -253,11 +263,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // 2. Add a click event listener to each tab item
       listItem.addEventListener('click', () => {
+        const tabId = parseInt(listItem.dataset.tabId, 10);
+
+        // Make the clicked tab active
+        chrome.tabs.update(tabId, { active: true });
+
+        // Update the styling of the tabs in the list
+        document.querySelectorAll('#tabsList li').forEach(item => {
+          if (parseInt(item.dataset.tabId, 10) === tabId) {
+            item.style.color = 'red';
+            item.style.fontWeight = 'bold';
+          } else {
+            item.style.color = '';
+            item.style.fontWeight = '';
+          }
+        });
+
         // Clear previous content and show loading message
         tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
         copyButton.style.display = 'none'; // Hide button while loading
 
-        const tabId = parseInt(listItem.dataset.tabId, 10);
+        
         const clickedTab = tabs.find(t => t.id === tabId);
         currentTabUrl = clickedTab ? clickedTab.url : '';
 
@@ -287,15 +313,19 @@ document.addEventListener('DOMContentLoaded', () => {
               // 4. Store and display the retrieved text content
               const pageText = injectionResults[0].result;
               currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-              currentMarkdownText = ''; // Reset markdown content
-              isMarkdownView = false; // Reset to raw text view
+              if (markdownData[currentTabUrl]) {
+                currentMarkdownText = markdownData[currentTabUrl];
+                isMarkdownView = true;
+              } else {
+                currentMarkdownText = ''; // Reset markdown content
+                isMarkdownView = false; // Reset to raw text view
+              }
 
               // Save to local storage
               chrome.storage.local.set({
                 lastRawText: currentRawText,
-                lastMarkdownText: '',
                 lastTabUrl: currentTabUrl,
-                isMarkdownView: false
+                isMarkdownView: isMarkdownView
               });
 
               displayContent();
