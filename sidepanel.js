@@ -218,130 +218,157 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 1. Get and display all tabs in the current window
-  chrome.tabs.query({ currentWindow: true }, (tabs) => {
-    if (chrome.runtime.lastError) {
-      console.error("Error querying tabs:", chrome.runtime.lastError.message);
-      tabsListElement.innerHTML = '<li>Error loading tabs.</li>';
-      return;
-    }
-
-    if (tabs.length === 0) {
-      tabsListElement.innerHTML = '<li>No tabs open in the current window.</li>';
-      return;
-    }
-
-    // Move the active tab to the top of the list
-    const activeTabIndex = tabs.findIndex(tab => tab.active);
-    if (activeTabIndex > 0) {
-      const [activeTab] = tabs.splice(activeTabIndex, 1);
-      tabs.unshift(activeTab);
-    }
-
-    tabs.forEach((tab) => {
-      // Create a list item for each tab
-      const listItem = document.createElement('li');
-      listItem.dataset.tabId = tab.id; // Store tabId for later use
-
-      if (tab.active) {
-        listItem.style.color = 'red';
-        listItem.style.fontWeight = 'bold';
+  function updateTabsList() {
+    chrome.tabs.query({ currentWindow: true }, (tabs) => {
+      if (chrome.runtime.lastError) {
+        console.error("Error querying tabs:", chrome.runtime.lastError.message);
+        tabsListElement.innerHTML = '<li>Error loading tabs.</li>';
+        return;
       }
 
-      // Create an element to display the title
-      const titleElement = document.createElement('span');
-      titleElement.className = 'tab-title';
-      titleElement.textContent = tab.title || 'Untitled Tab';
+      tabsListElement.innerHTML = '';
 
-      // Create an element to display the URL
-      const urlElement = document.createElement('span');
-      urlElement.className = 'tab-url';
-      urlElement.textContent = tab.url || 'No URL';
+      if (tabs.length === 0) {
+        tabsListElement.innerHTML = '<li>No tabs open in the current window.</li>';
+        return;
+      }
 
-      listItem.appendChild(titleElement);
-      listItem.appendChild(urlElement);
+      // Move the active tab to the top of the list
+      const activeTabIndex = tabs.findIndex(tab => tab.active);
+      if (activeTabIndex > 0) {
+        const [activeTab] = tabs.splice(activeTabIndex, 1);
+        tabs.unshift(activeTab);
+      }
 
-      // 2. Add a click event listener to each tab item
-      listItem.addEventListener('click', () => {
-        const tabId = parseInt(listItem.dataset.tabId, 10);
+      tabs.forEach((tab) => {
+        // Create a list item for each tab
+        const listItem = document.createElement('li');
+        listItem.dataset.tabId = tab.id; // Store tabId for later use
 
-        // Make the clicked tab active
-        chrome.tabs.update(tabId, { active: true });
-
-        // Update the styling of the tabs in the list
-        document.querySelectorAll('#tabsList li').forEach(item => {
-          if (parseInt(item.dataset.tabId, 10) === tabId) {
-            item.style.color = 'red';
-            item.style.fontWeight = 'bold';
-          } else {
-            item.style.color = '';
-            item.style.fontWeight = '';
-          }
-        });
-
-        // Clear previous content and show loading message
-        tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
-        copyButton.style.display = 'none'; // Hide button while loading
-
-
-        const clickedTab = tabs.find(t => t.id === tabId);
-        currentTabUrl = clickedTab ? clickedTab.url : '';
-
-        // Check if tabId is valid
-        if (isNaN(tabId)) {
-          console.error("Invalid tab ID:", listItem.dataset.tabId);
-          tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
-          return;
+        if (tab.active) {
+          listItem.style.color = 'red';
+          listItem.style.fontWeight = 'bold';
         }
 
-        // 3. Inject a function to get the text content into the selected tab
-        // Manifest V3 uses chrome.scripting.executeScript
-        chrome.scripting.executeScript(
-          {
-            target: { tabId: tabId },
-            func: () => document.body.innerText,
-          },
-          (injectionResults) => {
-            if (chrome.runtime.lastError) {
-              console.error(`Error injecting script into tab ${tabId}:`, chrome.runtime.lastError.message);
-              tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content from this tab. It might be a restricted page (e.g., chrome:// pages) or the extension lacks permission. Ensure 'host_permissions' in manifest.json includes this URL or is set to '<all_urls>'.</p>`;
-              copyButton.style.display = 'none';
-              return;
-            }
+        // Create an element to display the title
+        const titleElement = document.createElement('span');
+        titleElement.className = 'tab-title';
+        titleElement.textContent = tab.title || 'Untitled Tab';
 
-            if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
-              // 4. Store and display the retrieved text content
-              const pageText = injectionResults[0].result;
-              currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-              if (markdownData[currentTabUrl]) {
-                currentMarkdownText = markdownData[currentTabUrl];
-                isMarkdownView = true;
-              } else {
-                currentMarkdownText = ''; // Reset markdown content
-                isMarkdownView = false; // Reset to raw text view
+        // Create an element to display the URL
+        const urlElement = document.createElement('span');
+        urlElement.className = 'tab-url';
+        urlElement.textContent = tab.url || 'No URL';
+
+        listItem.appendChild(titleElement);
+        listItem.appendChild(urlElement);
+
+        // 2. Add a click event listener to each tab item
+        listItem.addEventListener('click', () => {
+          const tabId = parseInt(listItem.dataset.tabId, 10);
+
+          // Make the clicked tab active
+          chrome.tabs.update(tabId, { active: true });
+
+          // Update the styling of the tabs in the list
+          document.querySelectorAll('#tabsList li').forEach(item => {
+            if (parseInt(item.dataset.tabId, 10) === tabId) {
+              item.style.color = 'red';
+              item.style.fontWeight = 'bold';
+            } else {
+              item.style.color = '';
+              item.style.fontWeight = '';
+            }
+          });
+
+          // Clear previous content and show loading message
+          tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
+          copyButton.style.display = 'none'; // Hide button while loading
+
+
+          const clickedTab = tabs.find(t => t.id === tabId);
+          currentTabUrl = clickedTab ? clickedTab.url : '';
+
+          // Check if tabId is valid
+          if (isNaN(tabId)) {
+            console.error("Invalid tab ID:", listItem.dataset.tabId);
+            tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
+            return;
+          }
+
+          // 3. Inject a function to get the text content into the selected tab
+          // Manifest V3 uses chrome.scripting.executeScript
+          chrome.scripting.executeScript(
+            {
+              target: { tabId: tabId },
+              func: () => document.body.innerText,
+            },
+            (injectionResults) => {
+              if (chrome.runtime.lastError) {
+                console.error(`Error injecting script into tab ${tabId}:`, chrome.runtime.lastError.message);
+                tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content from this tab. It might be a restricted page (e.g., chrome:// pages) or the extension lacks permission. Ensure 'host_permissions' in manifest.json includes this URL or is set to '<all_urls>'.</p>`;
+                copyButton.style.display = 'none';
+                return;
               }
 
-              // Save to local storage
-              chrome.storage.local.set({
-                lastRawText: currentRawText,
-                lastTabUrl: currentTabUrl,
-                isMarkdownView: isMarkdownView
-              });
+              if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
+                // 4. Store and display the retrieved text content
+                const pageText = injectionResults[0].result;
+                currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
+                if (markdownData[currentTabUrl]) {
+                  currentMarkdownText = markdownData[currentTabUrl];
+                  isMarkdownView = true;
+                } else {
+                  currentMarkdownText = ''; // Reset markdown content
+                  isMarkdownView = false; // Reset to raw text view
+                }
 
-              displayContent();
-              updateControlsVisibility();
+                // Save to local storage
+                chrome.storage.local.set({
+                  lastRawText: currentRawText,
+                  lastTabUrl: currentTabUrl,
+                  isMarkdownView: isMarkdownView
+                });
 
-            } else {
-              console.warn("Script injected, but no result received from content script.", injectionResults);
-              tabContentContainerElement.innerHTML = '<p>Could not retrieve content. The content script might not have executed correctly or returned no data.</p>';
-              currentRawText = '';
-              currentMarkdownText = '';
-              updateControlsVisibility();
+                displayContent();
+                updateControlsVisibility();
+
+              } else {
+                console.warn("Script injected, but no result received from content script.", injectionResults);
+                tabContentContainerElement.innerHTML = '<p>Could not retrieve content. The content script might not have executed correctly or returned no data.</p>';
+                currentRawText = '';
+                currentMarkdownText = '';
+                updateControlsVisibility();
+              }
             }
-          }
-        );
+          );
+        });
+        tabsListElement.appendChild(listItem);
       });
-      tabsListElement.appendChild(listItem);
     });
+  }
+
+  // Initial load of the tabs list
+  updateTabsList();
+
+  // Listen for tab events to keep the list up-to-date
+  chrome.tabs.onCreated.addListener(updateTabsList);
+  chrome.tabs.onRemoved.addListener(updateTabsList);
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.title || changeInfo.url) {
+      updateTabsList();
+    }
+  });
+
+  // When a tab is activated, update the list and click the active tab
+  chrome.tabs.onActivated.addListener(activeInfo => {
+    updateTabsList();
+    // Use a short timeout to ensure the DOM is updated before clicking
+    setTimeout(() => {
+      const listItem = document.querySelector(`li[data-tab-id='${activeInfo.tabId}']`);
+      if (listItem) {
+        listItem.click();
+      }
+    }, 100);
   });
 });
