@@ -354,6 +354,14 @@ document.addEventListener('DOMContentLoaded', () => {
           const clickedTab = tabs.find(t => t.id === tabId);
           currentTabUrl = clickedTab ? clickedTab.url : '';
 
+          if (currentTabUrl.startsWith('chrome://')) {
+            tabContentContainerElement.innerHTML = '<p>Cannot access content of Chrome URLs.</p>';
+            currentRawText = '';
+            currentMarkdownText = '';
+            updateControlsVisibility();
+            return;
+          }
+
           // Check if tabId is valid
           if (isNaN(tabId)) {
             console.error("Invalid tab ID:", listItem.dataset.tabId);
