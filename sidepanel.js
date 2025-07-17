@@ -12,9 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
   const testApiKeyBtn = document.getElementById('testApiKeyBtn');
   const apiKeyStatus = document.getElementById('apiKeyStatus');
-
-  // State variables
-  let currentRawText = '';
+  const versionInfo = document.getElementById('versionInfo');
+ 
+   // State variables
+   let currentRawText = '';
   let currentMarkdownText = '';
   let isMarkdownView = false;
   let llmApiKey = null;
@@ -55,9 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error initializing extension:', error);
     }
   }
-
-  // Settings toggle
-  settingsToggle.addEventListener('click', () => {
+  // Display extension version
+  const manifest = chrome.runtime.getManifest();
+  versionInfo.textContent = `Version: ${manifest.version}`;
+ 
+   // Settings toggle
+   settingsToggle.addEventListener('click', () => {
     settingsContent.classList.toggle('hidden');
   });
 
