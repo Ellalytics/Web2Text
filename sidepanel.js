@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyButton = document.getElementById('copyButton');
   const convertToMarkdownBtn = document.getElementById('convertToMarkdownBtn');
   const viewToggleBtn = document.getElementById('viewToggleBtn');
+  const emailButton = document.getElementById('emailButton');
 
   // Settings elements
   const settingsToggle = document.getElementById('settingsToggle');
@@ -168,6 +169,69 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControlsVisibility();
   });
 
+  emailButton.addEventListener('click', () => {
+    emailMarkdownToUser();
+  });
+
+  async function emailMarkdownToUser() {
+    try {
+      const token = await new Promise((resolve, reject) => {
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(token);
+          }
+        });
+      });
+
+      if (!token) {
+        showStatus('Could not get auth token', 'error');
+        return;
+      }
+
+      const email = await new Promise((resolve, reject) => {
+        chrome.identity.getProfileUserInfo((userInfo) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(userInfo.email);
+          }
+        });
+      });
+
+      const subject = 'Up Work job description';
+      const body = currentMarkdownText;
+
+      const emailData = {
+        raw: btoa(
+          `To: ${email}\r\n` +
+          `Subject: ${subject}\r\n` +
+          `Content-Type: text/plain; charset=utf-8\r\n\r\n` +
+          `${body}`
+        )
+      };
+
+      const response = await fetch('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailData)
+      });
+
+      if (response.ok) {
+        showStatus('Email sent successfully!', 'success');
+      } else {
+        const errorData = await response.json();
+        showStatus(`Error sending email: ${errorData.error.message}`, 'error');
+      }
+    } catch (error) {
+      showStatus(`Error: ${error.message}`, 'error');
+    }
+  }
+
   function showStatus(message, type) {
     apiKeyStatus.textContent = message;
     apiKeyStatus.className = `status-message status-${type}`;
@@ -189,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyButton.style.display = hasContent ? 'block' : 'none';
     convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
     viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
+    emailButton.style.display = hasMarkdown ? 'block' : 'none';
 
     // Update view toggle button text
     if (hasMarkdown) {
