@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyButton = document.getElementById('copyButton');
   const convertToMarkdownBtn = document.getElementById('convertToMarkdownBtn');
   const viewToggleBtn = document.getElementById('viewToggleBtn');
+  const emailMarkdownBtn = document.getElementById('emailMarkdownBtn');
 
   // Settings elements
   const settingsToggle = document.getElementById('settingsToggle');
@@ -13,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const testApiKeyBtn = document.getElementById('testApiKeyBtn');
   const apiKeyStatus = document.getElementById('apiKeyStatus');
   const versionInfo = document.getElementById('versionInfo');
+  const signInButton = document.getElementById('signInButton');
+  const authStatus = document.getElementById('authStatus');
+  const signOutButton = document.getElementById('signOutButton');
  
    // State variables
    let currentRawText = '';
@@ -20,10 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMarkdownView = false;
   let llmApiKey = null;
   let currentTabUrl = '';
-  let markdownData = {};
 
   // Initialize the extension
   initializeExtension();
+  checkAuthStatus();
 
   async function initializeExtension() {
     try {
@@ -35,18 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Load last content
-      chrome.storage.local.get(['lastRawText', 'markdownData', 'lastTabUrl', 'isMarkdownView'], (result) => {
+      chrome.storage.local.get(['lastRawText', 'lastMarkdownText', 'lastTabUrl', 'isMarkdownView'], (result) => {
         if (result.lastRawText) {
           currentRawText = result.lastRawText;
-          markdownData = result.markdownData || {};
+          currentMarkdownText = result.lastMarkdownText || '';
           currentTabUrl = result.lastTabUrl || '';
           isMarkdownView = result.isMarkdownView || false;
-
-          if (markdownData[currentTabUrl]) {
-            currentMarkdownText = markdownData[currentTabUrl];
-          } else {
-            currentMarkdownText = '';
-          }
 
           displayContent();
           updateControlsVisibility();
@@ -64,6 +62,40 @@ document.addEventListener('DOMContentLoaded', () => {
    settingsToggle.addEventListener('click', () => {
     settingsContent.classList.toggle('hidden');
   });
+
+  // Sign in button
+  signInButton.addEventListener('click', () => {
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      if (chrome.runtime.lastError) {
+        showAuthStatus(`Sign-in error: ${chrome.runtime.lastError.message}`, 'error');
+        return;
+      }
+      if (token) {
+        showAuthStatus('Signed in successfully!', 'success');
+        checkAuthStatus();
+      }
+    });
+  });
+
+  // Sign out button
+  signOutButton.addEventListener('click', () => {
+    chrome.identity.getAuthToken({ 'interactive': false }, function(token) {
+        if (chrome.runtime.lastError || !token) {
+            showAuthStatus('Not signed in.', 'error');
+            return;
+        }
+
+        // Revoke the token
+        fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`)
+            .then(() => {
+                chrome.identity.removeCachedAuthToken({ token: token }, () => {
+                    showAuthStatus('Signed out successfully.', 'success');
+                    checkAuthStatus();
+                });
+            });
+    });
+  });
+
 
   // Save API key
   saveApiKeyBtn.addEventListener('click', async () => {
@@ -151,8 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Switch to markdown view
       isMarkdownView = true;
-      markdownData[currentTabUrl] = currentMarkdownText;
-      chrome.storage.local.set({ markdownData: markdownData, isMarkdownView: isMarkdownView });
+      chrome.storage.local.set({ lastMarkdownText: currentMarkdownText, isMarkdownView: isMarkdownView });
       displayContent();
       updateControlsVisibility();
 
@@ -172,6 +203,67 @@ document.addEventListener('DOMContentLoaded', () => {
     updateControlsVisibility();
   });
 
+  // Email markdown button
+  emailMarkdownBtn.addEventListener('click', async () => {
+    if (!currentMarkdownText) {
+      showStatus('No markdown content to email', 'error');
+      return;
+    }
+
+    emailMarkdownBtn.disabled = true;
+    emailMarkdownBtn.textContent = 'Sending...';
+
+    try {
+      // 1. Get auth token
+      chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+        if (chrome.runtime.lastError || !token) {
+          showStatus('Could not get auth token.', 'error');
+          emailMarkdownBtn.disabled = false;
+          emailMarkdownBtn.textContent = 'Email markdown to myself';
+          return;
+        }
+
+        // 2. Get user's email
+        const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const userInfo = await response.json();
+        const userEmail = userInfo.email;
+
+        if (!userEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+            showStatus('Could not retrieve a valid email address.', 'error');
+            emailMarkdownBtn.disabled = false;
+            emailMarkdownBtn.textContent = 'Email markdown to myself';
+            return;
+        }
+
+        // 3. Send email
+        const subject = currentMarkdownText.match(/^# (.*)/m);
+        const emailData = {
+          to: userEmail,
+          subject: subject ? subject[1] : 'Markdown Content',
+          body: currentMarkdownText
+        };
+
+        chrome.runtime.sendMessage({ action: 'sendEmail', emailData, token }, (response) => {
+          if (response.success) {
+            showStatus('Email sent successfully!', 'success');
+          } else {
+            showStatus(`Error sending email: ${response.error}`, 'error');
+          }
+          emailMarkdownBtn.disabled = false;
+          emailMarkdownBtn.textContent = 'Email markdown to myself';
+        });
+      });
+    } catch (error) {
+      showStatus(`Error: ${error.message}`, 'error');
+      emailMarkdownBtn.disabled = false;
+      emailMarkdownBtn.textContent = 'Email markdown to myself';
+    }
+  });
+
   function showStatus(message, type) {
     apiKeyStatus.textContent = message;
     apiKeyStatus.className = `status-message status-${type}`;
@@ -185,6 +277,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function showAuthStatus(message, type) {
+    authStatus.textContent = message;
+    authStatus.className = `status-message status-${type}`;
+  }
+
+  function checkAuthStatus() {
+    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+      if (token) {
+        signInButton.style.display = 'none';
+        signOutButton.style.display = 'block';
+        showAuthStatus('Signed in.', 'success');
+      } else {
+        signInButton.style.display = 'block';
+        signOutButton.style.display = 'none';
+        showAuthStatus('Not signed in.', 'error');
+      }
+    });
+  }
+
   function updateControlsVisibility() {
     const hasContent = currentRawText.length > 0;
     const hasMarkdown = currentMarkdownText.length > 0;
@@ -193,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     copyButton.style.display = hasContent ? 'block' : 'none';
     convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
     viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
+    emailMarkdownBtn.style.display = hasMarkdown ? 'block' : 'none';
 
     // Update view toggle button text
     if (hasMarkdown) {
@@ -309,7 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             (injectionResults) => {
               if (chrome.runtime.lastError) {
-                console.error(`Error injecting script into tab ${tabId}:`, chrome.runtime.lastError.message);
                 tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content from this tab. It might be a restricted page (e.g., chrome:// pages) or the extension lacks permission. Ensure 'host_permissions' in manifest.json includes this URL or is set to '<all_urls>'.</p>`;
                 copyButton.style.display = 'none';
                 return;
@@ -319,13 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 4. Store and display the retrieved text content
                 const pageText = injectionResults[0].result;
                 currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-                if (markdownData[currentTabUrl]) {
-                  currentMarkdownText = markdownData[currentTabUrl];
-                  isMarkdownView = true;
-                } else {
-                  currentMarkdownText = ''; // Reset markdown content
-                  isMarkdownView = false; // Reset to raw text view
-                }
+                isMarkdownView = false; // Always show raw text for a newly clicked tab
 
                 // Save to local storage
                 chrome.storage.local.set({

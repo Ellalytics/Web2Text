@@ -145,7 +145,8 @@
 
     #copyButton,
     #convertToMarkdownBtn,
-    #viewToggleBtn {
+    #viewToggleBtn,
+    #emailMarkdownBtn {
       background: #28a745;
       color: white;
       border: none;
@@ -224,6 +225,12 @@
         <button id="testApiKeyBtn">Test</button>
       </div>
       <div id="apiKeyStatus"></div>
+      <hr style="margin-top: 15px; margin-bottom: 10px;">
+      <div>
+        <button id="signInButton">Sign In with Google</button>
+        <button id="signOutButton" style="display: none;">Sign Out</button>
+        <div id="authStatus" class="status-message" style="margin-top: 8px;"></div>
+      </div>
     </div>
   </div>
 
@@ -237,6 +244,7 @@
     <button id="copyButton" style="display: none;">Copy Text</button>
     <button id="convertToMarkdownBtn" style="display: none;">Convert to Markdown</button>
     <button id="viewToggleBtn" style="display: none;">View Markdown</button>
+    <button id="emailMarkdownBtn" style="display: none;">Email markdown to myself</button>
   </div>
   <div id="tabContentContainer">
     <p>Select a tab from the list above to view its content.</p>

@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Tab Content Viewer",
-  "version": "1.0",
+  "version": "4.0",
   "description": "Lists all open tabs and displays the content of the selected tab.",
   "permissions": [
     "tabs",
     "scripting",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "identity"
   ],
   "host_permissions": [
     "<all_urls>",
@@ -30,5 +31,12 @@
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
+  },
+  "oauth2": {
+    "client_id": "70372770387-rd0rrttaug135a5n67ggrlqecdaktqdk.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/userinfo.email"
+    ]
   }
 }
