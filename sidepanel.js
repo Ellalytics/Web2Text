@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let llmApiKey = null;
   let currentTabUrl = '';
   let customPrompt = '';
+  let isLoading = false;
 
   // Initialize the extension
   initializeExtension();
@@ -335,6 +336,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateControlsVisibility() {
+    if (isLoading) {
+      copyButton.style.display = 'none';
+      viewToggleBtn.style.display = 'none';
+      emailMarkdownBtn.style.display = 'none';
+      convertToMarkdownBtn.style.display = 'none';
+      return;
+    }
+
     const hasContent = currentRawText.length > 0;
     const hasMarkdown = currentMarkdownText && currentMarkdownText.length > 0;
     const hasApiKey = llmApiKey && llmApiKey.length > 0;
@@ -432,10 +441,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           });
 
-          // Clear previous content and show loading message
+          // Set loading state and update UI
+          isLoading = true;
+          updateControlsVisibility();
           tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
-          copyButton.style.display = 'none'; // Hide button while loading
-
 
           const clickedTab = tabs.find(t => t.id === tabId);
           currentTabUrl = clickedTab ? clickedTab.url : '';
@@ -445,6 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (isNaN(tabId)) {
             console.error("Invalid tab ID:", listItem.dataset.tabId);
             tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
+            isLoading = false;
+            updateControlsVisibility();
             return;
           }
 
@@ -456,9 +467,10 @@ document.addEventListener('DOMContentLoaded', () => {
               func: () => document.body.innerText,
             },
             (injectionResults) => {
+              isLoading = false; // Reset loading state
               if (chrome.runtime.lastError) {
                 tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content from this tab. It might be a restricted page (e.g., chrome:// pages) or the extension lacks permission. Ensure 'host_permissions' in manifest.json includes this URL or is set to '<all_urls>'.</p>`;
-                copyButton.style.display = 'none';
+                updateControlsVisibility();
                 return;
               }
 
