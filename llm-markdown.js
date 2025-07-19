@@ -6,14 +6,15 @@ const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/mo
  * Convert plain text to structured markdown using Gemini API
  * @param {string} text - The plain text content to convert
  * @param {string} apiKey - The Gemini API key
+ * @param {string} [customPrompt] - An optional custom prompt to append
  * @returns {Promise<string>} The converted markdown content
  */
-async function convertTextToMarkdown(text, apiKey) {
+async function convertTextToMarkdown(text, apiKey, customPrompt = '') {
   if (!text || !apiKey) {
     throw new Error('Text content and API key are required');
   }
 
-  const prompt = createMarkdownConversionPrompt(text);
+  const prompt = createMarkdownConversionPrompt(text, customPrompt);
 
   try {
     const response = await fetch(`${GEMINI_API_BASE_URL}?key=${apiKey}`, {
@@ -59,10 +60,11 @@ async function convertTextToMarkdown(text, apiKey) {
 /**
  * Create a well-crafted prompt for text-to-markdown conversion
  * @param {string} text - The input text to convert
+ * @param {string} [customPrompt] - An optional custom prompt to append
  * @returns {string} The formatted prompt
  */
-function createMarkdownConversionPrompt(text) {
-  return `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
+function createMarkdownConversionPrompt(text, customPrompt = '') {
+  let prompt = `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
 
 INSTRUCTIONS:
 1. Output the source URL in the beginning as a markdown link "[Source URL](<URL>)"
@@ -75,13 +77,21 @@ INSTRUCTIONS:
 8. If there are multiple articles or sections, separate them clearly
 9. Remove social media buttons, "share this" links, and similar UI elements
 10. Keep only the essential, valuable content that a reader would want
-11. In the end, add a "CTA in this page" section to include important call to actions, such as "View Fees", "Enroll Now", "Read More", etc. 
+11. In the end, add a "CTA in this page" section to include important call to actions, such as "View Fees", "Enroll Now", "Read More", etc.`;
+
+  if (customPrompt && customPrompt.trim().length > 0) {
+    prompt += `\n\nADDITIONAL INSTRUCTIONS:\n${customPrompt}`;
+  }
+
+  prompt += `
 
 INPUT TEXT:
 ${text}
 
 OUTPUT:
 Please provide only the clean markdown content without any explanations or meta-commentary.`;
+
+  return prompt;
 }
 
 /**

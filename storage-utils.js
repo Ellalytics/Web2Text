@@ -62,3 +62,36 @@ function validateApiKeyFormat(apiKey) {
   // Basic validation: should start with 'AIza' and be at least 35 characters
   return apiKey.startsWith('AIza') && apiKey.length >= 35;
 }
+
+/**
+ * Save custom prompt to Chrome storage
+ * @param {string} prompt - The custom prompt to store
+ * @returns {Promise<void>}
+ */
+async function saveCustomPrompt(prompt) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.set({ customPrompt: prompt }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Retrieve custom prompt from Chrome storage
+ * @returns {Promise<string|null>} The stored custom prompt or null if not found
+ */
+async function getCustomPrompt() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.get(['customPrompt'], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result.customPrompt || null);
+      }
+    });
+  });
+}

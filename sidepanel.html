@@ -214,7 +214,7 @@
 <body>
   <!-- Settings Section -->
   <div id="settingsSection">
-    <button id="settingsToggle">⚙️ API Settings</button>
+    <button id="settingsToggle">⚙️ Settings</button>
     <div id="settingsContent" class="hidden">
       <label for="apiKeyInput" style="font-size: 12px; display: block; margin-bottom: 4px;">
         Gemini API Key:
@@ -225,6 +225,15 @@
         <button id="testApiKeyBtn">Test</button>
       </div>
       <div id="apiKeyStatus"></div>
+      <hr style="margin-top: 15px; margin-bottom: 10px;">
+      <label for="customPromptInput" style="font-size: 12px; display: block; margin-bottom: 4px;">
+        Custom Prompt:
+      </label>
+      <textarea id="customPromptInput" placeholder="Enter your custom prompt here" style="width: 100%; min-height: 60px; font-size: 12px;"></textarea>
+      <div>
+        <button id="saveCustomPromptBtn">Save Prompt</button>
+      </div>
+      <div id="customPromptStatus" class="status-message"></div>
       <hr style="margin-top: 15px; margin-bottom: 10px;">
       <div>
         <button id="signInButton">Sign In with Google</button>

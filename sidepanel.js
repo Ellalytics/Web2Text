@@ -18,12 +18,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const authStatus = document.getElementById('authStatus');
   const signOutButton = document.getElementById('signOutButton');
  
+  const customPromptInput = document.getElementById('customPromptInput');
+  const saveCustomPromptBtn = document.getElementById('saveCustomPromptBtn');
+  const customPromptStatus = document.getElementById('customPromptStatus');
+
    // State variables
    let currentRawText = '';
   let currentMarkdownText = '';
   let isMarkdownView = false;
   let llmApiKey = null;
   let currentTabUrl = '';
+  let customPrompt = '';
 
   // Initialize the extension
   initializeExtension();
@@ -53,13 +58,26 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error initializing extension:', error);
     }
   }
+
   // Display extension version
   const manifest = chrome.runtime.getManifest();
   versionInfo.textContent = `Version: ${manifest.version}`;
- 
+  
    // Settings toggle
    settingsToggle.addEventListener('click', () => {
     settingsContent.classList.toggle('hidden');
+  });
+
+  // Save custom prompt
+  saveCustomPromptBtn.addEventListener('click', async () => {
+    const prompt = customPromptInput.value.trim();
+    try {
+      await saveCustomPrompt(prompt);
+      customPrompt = prompt;
+      showCustomPromptStatus('Prompt saved successfully', 'success');
+    } catch (error) {
+      showCustomPromptStatus('Error saving prompt: ' + error.message, 'error');
+    }
   });
 
   // Sign in button
@@ -177,7 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
     convertToMarkdownBtn.textContent = 'Converting...';
 
     try {
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey);
+      const customPrompt = await getCustomPrompt();
+      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
 
       // Switch to markdown view
@@ -287,6 +306,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function showAuthStatus(message, type) {
     authStatus.textContent = message;
     authStatus.className = `status-message status-${type}`;
+  }
+
+  function showCustomPromptStatus(message, type) {
+    customPromptStatus.textContent = message;
+    customPromptStatus.className = `status-message status-${type}`;
+
+    if (type === 'success') {
+      setTimeout(() => {
+        customPromptStatus.textContent = '';
+        customPromptStatus.className = '';
+      }, 3000);
+    }
   }
 
   function checkAuthStatus() {
