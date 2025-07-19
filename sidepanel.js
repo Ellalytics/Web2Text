@@ -305,22 +305,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateControlsVisibility() {
     const hasContent = currentRawText.length > 0;
-    const hasMarkdown = currentMarkdownText.length > 0;
+    const hasMarkdown = currentMarkdownText && currentMarkdownText.length > 0;
     const hasApiKey = llmApiKey && llmApiKey.length > 0;
 
     copyButton.style.display = hasContent ? 'block' : 'none';
-    convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
-    viewToggleBtn.style.display = currentMarkdownText ? 'block' : 'none';
+    viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
     emailMarkdownBtn.style.display = hasMarkdown ? 'block' : 'none';
+    convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
 
-    // Update view toggle button text
     if (hasMarkdown) {
+      copyButton.textContent = isMarkdownView ? 'Copy Markdown' : 'Copy Raw Text';
       viewToggleBtn.textContent = isMarkdownView ? 'View Raw Text' : 'View Markdown';
-    }
-
-    // Update copy button text
-    if (hasContent) {
-      copyButton.textContent = isMarkdownView && hasMarkdown ? 'Copy Markdown' : 'Copy Text';
+    } else {
+      copyButton.textContent = 'Copy Raw Text';
     }
   }
 
@@ -438,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 4. Store and display the retrieved text content
                 const pageText = injectionResults[0].result;
                 currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-                isMarkdownView = false; // Always show raw text for a newly clicked tab
+                isMarkdownView = !!currentMarkdownText;
 
                 // Save to local storage
                 chrome.storage.local.set({
