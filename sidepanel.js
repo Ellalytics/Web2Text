@@ -39,10 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Load last content
-      chrome.storage.local.get(['lastRawText', 'lastMarkdownText', 'lastTabUrl', 'isMarkdownView'], (result) => {
+      chrome.storage.local.get(['lastRawText', 'lastTabUrl', 'isMarkdownView'], (result) => {
         if (result.lastRawText) {
           currentRawText = result.lastRawText;
-          currentMarkdownText = result.lastMarkdownText || '';
           currentTabUrl = result.lastTabUrl || '';
           isMarkdownView = result.isMarkdownView || false;
 
@@ -183,7 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Switch to markdown view
       isMarkdownView = true;
-      chrome.storage.local.set({ lastMarkdownText: currentMarkdownText, isMarkdownView: isMarkdownView });
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveMarkdownForTab(activeTab.id, currentMarkdownText);
+      chrome.storage.local.set({ isMarkdownView: isMarkdownView });
       displayContent();
       updateControlsVisibility();
 
@@ -240,10 +241,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 3. Send email
-        const subject = currentMarkdownText.match(/^# (.*)/m);
+        const subjectMatch = currentMarkdownText.match(/^# (.*)/m);
+        const subjectTitle = subjectMatch ? subjectMatch[1] : 'Untitled Content';
+        
+        // Extract hostname from URL
+        const hostname = currentTabUrl ? new URL(currentTabUrl).hostname : '';
+        const subject = hostname ? `[${hostname}] ${subjectTitle}` : subjectTitle;
+
         const emailData = {
           to: userEmail,
-          subject: subject ? subject[1] : 'Markdown Content',
+          subject: subject,
           body: currentMarkdownText
         };
 
@@ -303,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     copyButton.style.display = hasContent ? 'block' : 'none';
     convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
-    viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
+    viewToggleBtn.style.display = currentMarkdownText ? 'block' : 'none';
     emailMarkdownBtn.style.display = hasMarkdown ? 'block' : 'none';
 
     // Update view toggle button text
@@ -380,7 +387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         listItem.appendChild(urlElement);
 
         // 2. Add a click event listener to each tab item
-        listItem.addEventListener('click', () => {
+        listItem.addEventListener('click', async () => {
           const tabId = parseInt(listItem.dataset.tabId, 10);
 
           // Make the clicked tab active
@@ -404,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const clickedTab = tabs.find(t => t.id === tabId);
           currentTabUrl = clickedTab ? clickedTab.url : '';
+          currentMarkdownText = await getMarkdownForTab(tabId);
 
           // Check if tabId is valid
           if (isNaN(tabId)) {
@@ -481,3 +489,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   });
 });
+  // Store and retrieve markdown for a specific tab
+  async function saveMarkdownForTab(tabId, markdown) {
+    return new Promise((resolve) => {
+      const key = `markdown_${tabId}`;
+      chrome.storage.local.set({ [key]: markdown }, () => {
+        resolve();
+      });
+    });
+  }
+
+  async function getMarkdownForTab(tabId) {
+    return new Promise((resolve) => {
+      const key = `markdown_${tabId}`;
+      chrome.storage.local.get([key], (result) => {
+        resolve(result[key] || null);
+      });
+    });
+  }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Content Viewer",
-  "version": "4.0",
+  "version": "5.0",
   "description": "Lists all open tabs and displays the content of the selected tab.",
   "permissions": [
     "tabs",
