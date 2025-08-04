@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const convertToMarkdownBtn = document.getElementById('convertToMarkdownBtn');
   const viewToggleBtn = document.getElementById('viewToggleBtn');
   const emailMarkdownBtn = document.getElementById('emailMarkdownBtn');
+  const emailStatus = document.getElementById('emailStatus');
 
   // Settings elements
   const settingsToggle = document.getElementById('settingsToggle');
@@ -276,16 +277,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chrome.runtime.sendMessage({ action: 'sendEmail', emailData, token }, (response) => {
           if (response.success) {
-            showStatus('Email sent successfully!', 'success');
+            showEmailStatus('Email sent successfully!', 'success');
           } else {
-            showStatus(`Error sending email: ${response.error}`, 'error');
+            showEmailStatus(`Error sending email: ${response.error}`, 'error');
           }
           emailMarkdownBtn.disabled = false;
           emailMarkdownBtn.textContent = 'Email markdown to myself';
         });
       });
     } catch (error) {
-      showStatus(`Error: ${error.message}`, 'error');
+      showEmailStatus(`Error: ${error.message}`, 'error');
       emailMarkdownBtn.disabled = false;
       emailMarkdownBtn.textContent = 'Email markdown to myself';
     }
@@ -317,6 +318,19 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         customPromptStatus.textContent = '';
         customPromptStatus.className = '';
+      }, 3000);
+    }
+  }
+
+  function showEmailStatus(message, type) {
+    emailStatus.textContent = message;
+    emailStatus.className = `status-message status-${type}`;
+
+    // Auto-hide success messages after 3 seconds
+    if (type === 'success') {
+      setTimeout(() => {
+        emailStatus.textContent = '';
+        emailStatus.className = '';
       }, 3000);
     }
   }
