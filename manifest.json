@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Tab Content Viewer",
-  "version": "5.0",
-  "description": "Lists all open tabs and displays the content of the selected tab.",
+  "name": "Text Reveal",
+  "version": "1.0",
+  "description": "Reveal the web content in markdown or raw text. Customizable AI markdown generation. Copy or Send.",
   "permissions": [
     "tabs",
     "scripting",

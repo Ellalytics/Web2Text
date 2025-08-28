@@ -1,4 +1,4 @@
-# Tab Content Viewer
+# Text Reveal
 
 A browser extension that lists all open tabs and displays the content of the selected tab. It can also convert the content of a web page to Markdown format using the Gemini API.
 
