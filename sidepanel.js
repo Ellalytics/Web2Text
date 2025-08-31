@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const textContent = isMarkdownView ? currentMarkdownText : currentRawText;
     navigator.clipboard.writeText(textContent).then(() => {
       const originalText = copyButton.textContent;
-      copyButton.textContent = 'Copied!';
+      copyButton.textContent = '✅ Copied!';
       setTimeout(() => {
         copyButton.textContent = originalText;
       }, 2000);
@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     isConverting = true;
     aiConvertBtn.disabled = true;
-    aiConvertBtn.textContent = 'Converting...';
+    aiConvertBtn.textContent = '✨ Converting...';
     const conversionTabId = currentTabId; // Capture the tab ID at the start of conversion
     const conversionTabUrl = currentTabUrl; // Capture the tab URL at the start of conversion
 
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     emailButton.disabled = true;
-    emailButton.textContent = 'Sending...';
+    emailButton.textContent = '✉️ Sending...';
 
     try {
       // 1. Get auth token
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chrome.runtime.lastError || !token) {
           showStatus('Could not get auth token.', 'error');
           emailButton.disabled = false;
-          emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
+          emailButton.textContent = isMarkdownView ? '✉️ Email Markdown' : '✉️ Email Raw Text';
           return;
         }
 
@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!userEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
             showStatus('Could not retrieve a valid email address.', 'error');
             emailButton.disabled = false;
-            emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
+            emailButton.textContent = isMarkdownView ? '✉️ Email Markdown' : '✉️ Email Raw Text';
             return;
         }
 
@@ -398,13 +398,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showEmailStatus(`Error sending email: ${response.error}`, 'error');
           }
           emailButton.disabled = false;
-          emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
+          emailButton.textContent = isMarkdownView ? '✉️ Email Markdown' : '✉️ Email Raw Text';
         });
       });
     } catch (error) {
       showEmailStatus(`Error: ${error.message}`, 'error');
       emailButton.disabled = false;
-      emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
+      emailButton.textContent = isMarkdownView ? '✉️ Email Markdown' : '✉️ Email Raw Text';
     }
   });
 
@@ -518,19 +518,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update button text and states
     if (isMarkdownView) {
-      viewToggleButton.textContent = 'View Raw Text';
-      copyButton.textContent = 'Copy Markdown';
-      emailButton.textContent = 'Email Markdown';
+      viewToggleButton.textContent = '📄 View Raw Text';
+      copyButton.textContent = '📋 Copy Markdown';
+      emailButton.textContent = '✉️ Email Markdown';
     } else {
-      viewToggleButton.textContent = 'View Markdown';
-      copyButton.textContent = 'Copy Raw Text';
-      emailButton.textContent = 'Email Raw Text';
+      viewToggleButton.textContent = '📄 View Markdown';
+      copyButton.textContent = '📋 Copy Raw Text';
+      emailButton.textContent = '✉️ Email Raw Text';
     }
 
     viewToggleButton.disabled = !hasMarkdown;
     aiConvertBtn.disabled = isConverting;
     if (!isConverting) {
-      aiConvertBtn.textContent = 'AI Convert';
+      aiConvertBtn.textContent = '✨ AI Convert';
     }
   }
 

@@ -146,34 +146,31 @@
     #copyButton,
     #convertToMarkdownBtn,
     #viewToggleBtn,
-    #emailMarkdownBtn {
-      background: #28a745;
-      color: white;
-      border: none;
+    #emailMarkdownBtn,
+    #viewToggleButton,
+    #emailButton,
+    #aiConvertBtn {
+      background: #e9ecef;
+      /* A light grey */
+      color: #212529;
+      /* Dark text for contrast */
+      border: 1px solid #ced4da;
+      /* A slightly darker grey border */
       padding: 6px 12px;
       border-radius: 3px;
       cursor: pointer;
       font-size: 12px;
     }
 
-    #convertToMarkdownBtn {
-      background: #6f42c1;
-    }
-
-    #viewToggleBtn {
-      background: #17a2b8;
-    }
-
-    #copyButton:hover {
-      background: #218838;
-    }
-
-    #convertToMarkdownBtn:hover {
-      background: #5a32a3;
-    }
-
-    #viewToggleBtn:hover {
-      background: #138496;
+    #copyButton:hover,
+    #convertToMarkdownBtn:hover,
+    #viewToggleBtn:hover,
+    #emailMarkdownBtn:hover,
+    #viewToggleButton:hover,
+    #emailButton:hover,
+    #aiConvertBtn:hover {
+      background: #dee2e6;
+      /* A slightly darker grey on hover */
     }
 
     button:disabled {
@@ -264,13 +261,13 @@
   <h2>Selected Tab Content</h2>
   <div id="controls">
     <div id="button-row-1" style="display: flex; gap: 8px;">
-      <button id="viewToggleButton" style="display: none;">View Markdown</button>
-      <button id="copyButton" style="display: none;">Copy Raw Text</button>
-      <button id="emailButton" style="display: none;">Email Raw Text</button>
+      <button id="viewToggleButton" style="display: none;">📄 View Markdown</button>
+      <button id="copyButton" style="display: none;">📋 Copy Raw Text</button>
+      <button id="emailButton" style="display: none;">✉️ Email Raw Text</button>
     </div>
     <div id="button-row-2" style="margin-top: 8px; display: flex; gap: 8px;">
       <select id="customPromptSelect" style="display: none;"></select>
-      <button id="aiConvertBtn" style="display: none;">AI Convert</button>
+      <button id="aiConvertBtn" style="display: none;">✨ AI Convert</button>
     </div>
   </div>
   <div id="emailStatus" class="status-message" style="margin-top: 8px;"></div>
