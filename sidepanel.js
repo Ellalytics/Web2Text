@@ -603,13 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Move the active tab to the top of the list
-      const activeTabIndex = tabs.findIndex(tab => tab.active);
-      if (activeTabIndex > 0) {
-        const [activeTab] = tabs.splice(activeTabIndex, 1);
-        tabs.unshift(activeTab);
-      }
-
       tabs.forEach((tab) => {
         // Create a list item for each tab
         const listItem = document.createElement('li');
