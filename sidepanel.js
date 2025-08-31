@@ -481,7 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     viewToggleButton.disabled = !hasMarkdown;
-    aiConvertBtn.disabled = hasMarkdown || isConverting;
+    aiConvertBtn.disabled = isConverting;
     if (!isConverting) {
       aiConvertBtn.textContent = 'AI Convert';
     }
