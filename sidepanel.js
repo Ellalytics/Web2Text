@@ -6,9 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewToggleButton = document.getElementById('viewToggleButton');
   const emailButton = document.getElementById('emailButton');
   const emailStatus = document.getElementById('emailStatus');
-
-  // Settings elements
-  const settingsToggle = document.getElementById('settingsToggle');
+  const errorDisplay = document.getElementById('errorDisplay');
+ 
+   // Settings elements
+   const settingsToggle = document.getElementById('settingsToggle');
   const settingsContent = document.getElementById('settingsContent');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
@@ -324,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     } catch (error) {
       console.error('Error converting to markdown:', error);
-      showStatus('Error converting to markdown: ' + error.message, 'error');
+      showGlobalError('Error converting to markdown: ' + error.message);
     } finally {
       isConverting = false;
       // The button state will be updated in updateControlsVisibility
@@ -419,10 +420,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 3000);
     }
   }
+ 
+   function showGlobalError(message) {
+    errorDisplay.textContent = message;
+    errorDisplay.style.display = 'block';
+  }
 
-  function showAuthStatus(message, type) {
-    authStatus.textContent = message;
-    authStatus.className = `status-message status-${type}`;
+   function showAuthStatus(message, type) {
+     authStatus.textContent = message;
+     authStatus.className = `status-message status-${type}`;
   }
 
   function showCustomPromptStatus(message, type) {
