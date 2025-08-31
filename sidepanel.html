@@ -255,12 +255,15 @@
 
   <h2>Selected Tab Content</h2>
   <div id="controls">
-    <button id="copyButton" style="display: none;">Copy Text</button>
-    <button id="emailRawTextBtn" style="display: none;">Email Raw Text</button>
-    <select id="customPromptSelect" style="display: none;"></select>
-    <button id="aiConvertBtn" style="display: none;">AI Convert</button>
-    <button id="viewToggleBtn" style="display: none;">View Markdown</button>
-    <button id="emailMarkdownBtn" style="display: none;">Email markdown to myself</button>
+    <div id="button-row-1" style="display: flex; gap: 8px;">
+      <button id="viewToggleButton" style="display: none;">View Markdown</button>
+      <button id="copyButton" style="display: none;">Copy Raw Text</button>
+      <button id="emailButton" style="display: none;">Email Raw Text</button>
+    </div>
+    <div id="button-row-2" style="margin-top: 8px; display: flex; gap: 8px;">
+      <select id="customPromptSelect" style="display: none;"></select>
+      <button id="aiConvertBtn" style="display: none;">AI Convert</button>
+    </div>
   </div>
   <div id="emailStatus" class="status-message" style="margin-top: 8px;"></div>
   <div id="tabContentContainer">

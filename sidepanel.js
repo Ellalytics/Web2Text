@@ -3,9 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabContentContainerElement = document.getElementById('tabContentContainer');
   const copyButton = document.getElementById('copyButton');
   const aiConvertBtn = document.getElementById('aiConvertBtn');
-  const viewToggleBtn = document.getElementById('viewToggleBtn');
-  const emailMarkdownBtn = document.getElementById('emailMarkdownBtn');
-  const emailRawTextBtn = document.getElementById('emailRawTextBtn');
+  const viewToggleButton = document.getElementById('viewToggleButton');
+  const emailButton = document.getElementById('emailButton');
   const emailStatus = document.getElementById('emailStatus');
 
   // Settings elements
@@ -32,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let llmApiKey = null;
   let customPrompts = [];
   let isLoading = false;
+  let isConverting = false;
   let currentTabId = null;
   let currentTabUrl = '';
 
@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    isConverting = true;
     aiConvertBtn.disabled = true;
     aiConvertBtn.textContent = 'Converting...';
     const conversionTabId = currentTabId; // Capture the tab ID at the start of conversion
@@ -306,35 +307,37 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error converting to markdown:', error);
       showStatus('Error converting to markdown: ' + error.message, 'error');
     } finally {
-      aiConvertBtn.disabled = false;
-      aiConvertBtn.textContent = 'AI Convert';
+      isConverting = false;
+      // The button state will be updated in updateControlsVisibility
+      updateControlsVisibility();
     }
   });
 
   // View toggle button
-  viewToggleBtn.addEventListener('click', () => {
+  viewToggleButton.addEventListener('click', () => {
     isMarkdownView = !isMarkdownView;
     displayContent();
     updateControlsVisibility();
   });
 
-  // Email markdown button
-  emailMarkdownBtn.addEventListener('click', async () => {
-    if (!currentMarkdownText) {
-      showStatus('No markdown content to email', 'error');
+  // Email button
+  emailButton.addEventListener('click', async () => {
+    const textContent = isMarkdownView ? currentMarkdownText : currentRawText;
+    if (!textContent) {
+      showStatus('No content to email', 'error');
       return;
     }
 
-    emailMarkdownBtn.disabled = true;
-    emailMarkdownBtn.textContent = 'Sending...';
+    emailButton.disabled = true;
+    emailButton.textContent = 'Sending...';
 
     try {
       // 1. Get auth token
       chrome.identity.getAuthToken({ interactive: true }, async (token) => {
         if (chrome.runtime.lastError || !token) {
           showStatus('Could not get auth token.', 'error');
-          emailMarkdownBtn.disabled = false;
-          emailMarkdownBtn.textContent = 'Email markdown to myself';
+          emailButton.disabled = false;
+          emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
           return;
         }
 
@@ -349,13 +352,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!userEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
             showStatus('Could not retrieve a valid email address.', 'error');
-            emailMarkdownBtn.disabled = false;
-            emailMarkdownBtn.textContent = 'Email markdown to myself';
+            emailButton.disabled = false;
+            emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
             return;
         }
 
         // 3. Send email
-        const subjectMatch = currentMarkdownText.match(/^# (.*)/m);
+        const subjectMatch = isMarkdownView ? currentMarkdownText.match(/^# (.*)/m) : currentRawText.match(/^Source URL: (.*)/m);
         const subjectTitle = subjectMatch ? subjectMatch[1] : 'Untitled Content';
         
         // Extract hostname from URL
@@ -365,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const emailData = {
           to: userEmail,
           subject: subject,
-          body: currentMarkdownText
+          body: textContent
         };
 
         chrome.runtime.sendMessage({ action: 'sendEmail', emailData, token }, (response) => {
@@ -374,81 +377,14 @@ document.addEventListener('DOMContentLoaded', () => {
           } else {
             showEmailStatus(`Error sending email: ${response.error}`, 'error');
           }
-          emailMarkdownBtn.disabled = false;
-          emailMarkdownBtn.textContent = 'Email markdown to myself';
+          emailButton.disabled = false;
+          emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
         });
       });
     } catch (error) {
       showEmailStatus(`Error: ${error.message}`, 'error');
-      emailMarkdownBtn.disabled = false;
-      emailMarkdownBtn.textContent = 'Email markdown to myself';
-    }
-  });
-
-  // Email raw text button
-  emailRawTextBtn.addEventListener('click', async () => {
-    if (!currentRawText) {
-      showStatus('No raw text to email', 'error');
-      return;
-    }
-
-    emailRawTextBtn.disabled = true;
-    emailRawTextBtn.textContent = 'Sending...';
-
-    try {
-      // 1. Get auth token
-      chrome.identity.getAuthToken({ interactive: true }, async (token) => {
-        if (chrome.runtime.lastError || !token) {
-          showStatus('Could not get auth token.', 'error');
-          emailRawTextBtn.disabled = false;
-          emailRawTextBtn.textContent = 'Email Raw Text';
-          return;
-        }
-
-        // 2. Get user's email
-        const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const userInfo = await response.json();
-        const userEmail = userInfo.email;
-
-        if (!userEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
-            showStatus('Could not retrieve a valid email address.', 'error');
-            emailRawTextBtn.disabled = false;
-            emailRawTextBtn.textContent = 'Email Raw Text';
-            return;
-        }
-
-        // 3. Send email
-        const subjectMatch = currentRawText.match(/^Source URL: (.*)/m);
-        const subjectTitle = subjectMatch ? subjectMatch[1] : 'Untitled Content';
-        
-        // Extract hostname from URL
-        const hostname = currentTabUrl ? new URL(currentTabUrl).hostname : '';
-        const subject = hostname ? `[${hostname}] ${subjectTitle}` : subjectTitle;
-
-        const emailData = {
-          to: userEmail,
-          subject: subject,
-          body: currentRawText
-        };
-
-        chrome.runtime.sendMessage({ action: 'sendEmail', emailData, token }, (response) => {
-          if (response.success) {
-            showEmailStatus('Email sent successfully!', 'success');
-          } else {
-            showEmailStatus(`Error sending email: ${response.error}`, 'error');
-          }
-          emailRawTextBtn.disabled = false;
-          emailRawTextBtn.textContent = 'Email Raw Text';
-        });
-      });
-    } catch (error) {
-      showEmailStatus(`Error: ${error.message}`, 'error');
-      emailRawTextBtn.disabled = false;
-      emailRawTextBtn.textContent = 'Email Raw Text';
+      emailButton.disabled = false;
+      emailButton.textContent = isMarkdownView ? 'Email Markdown' : 'Email Raw Text';
     }
   });
 
@@ -512,9 +448,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateControlsVisibility() {
     if (isLoading) {
       copyButton.style.display = 'none';
-      viewToggleBtn.style.display = 'none';
-      emailMarkdownBtn.style.display = 'none';
-      emailRawTextBtn.style.display = 'none';
+      viewToggleButton.style.display = 'none';
+      emailButton.style.display = 'none';
       aiConvertBtn.style.display = 'none';
       customPromptSelect.style.display = 'none';
       return;
@@ -524,19 +459,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasMarkdown = currentMarkdownText && currentMarkdownText.length > 0;
     const hasApiKey = llmApiKey && llmApiKey.length > 0;
 
+    // Row 1
+    viewToggleButton.style.display = hasContent ? 'block' : 'none';
     copyButton.style.display = hasContent ? 'block' : 'none';
-    viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
-    emailMarkdownBtn.style.display = hasMarkdown ? 'block' : 'none';
-    emailRawTextBtn.style.display = hasContent ? 'block' : 'none';
+    emailButton.style.display = hasContent ? 'block' : 'none';
+
+    // Row 2
     const showAiControls = hasContent && hasApiKey;
     aiConvertBtn.style.display = showAiControls ? 'block' : 'none';
     customPromptSelect.style.display = showAiControls ? 'block' : 'none';
 
-    if (hasMarkdown) {
-      copyButton.textContent = isMarkdownView ? 'Copy Markdown' : 'Copy Raw Text';
-      viewToggleBtn.textContent = isMarkdownView ? 'View Raw Text' : 'View Markdown';
+    // Update button text and states
+    if (isMarkdownView) {
+      viewToggleButton.textContent = 'View Raw Text';
+      copyButton.textContent = 'Copy Markdown';
+      emailButton.textContent = 'Email Markdown';
     } else {
+      viewToggleButton.textContent = 'View Markdown';
       copyButton.textContent = 'Copy Raw Text';
+      emailButton.textContent = 'Email Raw Text';
+    }
+
+    viewToggleButton.disabled = !hasMarkdown;
+    aiConvertBtn.disabled = hasMarkdown || isConverting;
+    if (!isConverting) {
+      aiConvertBtn.textContent = 'AI Convert';
     }
   }
 
