@@ -292,7 +292,28 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (!currentRawText) {
+    // Fetch the latest raw text directly from the active tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tabs || tabs.length === 0) {
+      showStatus('No active tab found', 'error');
+      return;
+    }
+    const activeTab = tabs[0];
+
+    const injectionResults = await chrome.scripting.executeScript({
+      target: { tabId: activeTab.id },
+      func: () => document.body.innerText,
+    });
+
+    if (chrome.runtime.lastError || !injectionResults || !injectionResults[0] || !injectionResults[0].result) {
+      showStatus('Could not retrieve content from the page.', 'error');
+      return;
+    }
+
+    const latestRawText = `Source URL: ${activeTab.url}\n\n${injectionResults[0].result}`;
+    currentRawText = latestRawText; // Update state just in case
+
+    if (!latestRawText) {
       showStatus('No content to convert', 'error');
       return;
     }
@@ -317,11 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const conversionTabUrl = currentTabUrl; // Capture the tab URL at the start of conversion
 
     try {
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, llmApiEndpoint, customPrompt);
+      currentMarkdownText = await convertTextToMarkdown(latestRawText, llmApiKey, llmApiEndpoint, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
-      // Save the new markdown content along with the raw text
+      // Save only the new markdown content, not the raw text
       await savePageContent(conversionTabUrl, {
-        rawText: currentRawText,
         markdownText: currentMarkdownText
       });
 
@@ -623,51 +643,48 @@ document.addEventListener('DOMContentLoaded', () => {
           tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
 
           const clickedTab = tabs.find(t => t.id === tabId);
-          currentTabUrl = clickedTab ? clickedTab.url : '';
+          const tabUrl = clickedTab ? clickedTab.url : '';
+          currentTabUrl = tabUrl;
 
           // Try to load saved content for this URL first
-          const savedContent = await getPageContent(currentTabUrl);
-          if (savedContent) {
-            currentRawText = savedContent.rawText || '';
-            currentMarkdownText = savedContent.markdownText || '';
-            isMarkdownView = !!currentMarkdownText;
-            displayContent();
-            isLoading = false;
-            updateControlsVisibility();
-          } else {
-            // If no saved content, fetch it from the page
-            chrome.scripting.executeScript(
-              {
-                target: { tabId: tabId },
-                func: () => document.body.innerText,
-              },
-              async (injectionResults) => {
-                isLoading = false;
-                if (chrome.runtime.lastError) {
-                  tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content. It might be a restricted page.</p>`;
-                  updateControlsVisibility();
-                  return;
-                }
-
-                if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
-                  const pageText = injectionResults[0].result;
-                  currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-                  currentMarkdownText = ''; // Reset markdown on new content
-                  isMarkdownView = false;
-
-                  // Save the newly fetched content
-                  await savePageContent(currentTabUrl, { rawText: currentRawText, markdownText: currentMarkdownText });
-                  
-                  displayContent();
-                } else {
-                  tabContentContainerElement.innerHTML = '<p>Could not retrieve content from this tab.</p>';
-                  currentRawText = '';
-                  currentMarkdownText = '';
-                }
-                updateControlsVisibility();
+          // We no longer save raw text, only markdown.
+          const savedContent = await getPageContent(tabUrl);
+          
+          // Always fetch the latest raw text from the page.
+          chrome.scripting.executeScript(
+            {
+              target: { tabId: tabId },
+              func: () => document.body.innerText,
+            },
+            (injectionResults) => {
+              // Only update the UI if the user is still on the same tab
+              if (tabId !== currentTabId) {
+                return;
               }
-            );
-          }
+
+              isLoading = false;
+              if (chrome.runtime.lastError) {
+                tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content. It might be a restricted page.</p>`;
+                currentRawText = '';
+                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
+                updateControlsVisibility();
+                return;
+              }
+
+              if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
+                const pageText = injectionResults[0].result;
+                currentRawText = `Source URL: ${tabUrl}\n\n${pageText}`;
+                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
+                isMarkdownView = !!currentMarkdownText; // View markdown if it exists
+                displayContent();
+              } else {
+                tabContentContainerElement.innerHTML = '<p>Could not retrieve content from this tab.</p>';
+                currentRawText = '';
+                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
+              }
+              updateControlsVisibility();
+            }
+          );
         });
         tabsListElement.appendChild(listItem);
       });
