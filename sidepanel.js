@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentMarkdownText = '';
   let isMarkdownView = false;
   let llmApiKey = null;
-  let currentTabUrl = '';
   let customPrompts = [];
   let isLoading = false;
   let currentTabId = null;
@@ -52,17 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
       customPrompts = await getCustomPrompts();
       renderCustomPrompts();
 
-      // Load last content
-      chrome.storage.local.get(['lastRawText', 'lastTabUrl', 'isMarkdownView'], (result) => {
-        if (result.lastRawText) {
-          currentRawText = result.lastRawText;
-          currentTabUrl = result.lastTabUrl || '';
-          isMarkdownView = result.isMarkdownView || false;
-
-          displayContent();
-          updateControlsVisibility();
-        }
-      });
     } catch (error) {
       console.error('Error initializing extension:', error);
     }
@@ -299,12 +287,15 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
-      await saveMarkdownForTab(conversionTabId, currentMarkdownText);
+      // Save the new markdown content along with the raw text
+      await savePageContent(currentTabUrl, {
+        rawText: currentRawText,
+        markdownText: currentMarkdownText
+      });
 
       // Only update the view if the user is still on the same tab
       if (conversionTabId === currentTabId) {
         isMarkdownView = true;
-        chrome.storage.local.set({ isMarkdownView: isMarkdownView });
         displayContent();
         updateControlsVisibility();
       }
@@ -628,57 +619,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const clickedTab = tabs.find(t => t.id === tabId);
           currentTabUrl = clickedTab ? clickedTab.url : '';
-          currentMarkdownText = await getMarkdownForTab(tabId);
 
-          // Check if tabId is valid
-          if (isNaN(tabId)) {
-            console.error("Invalid tab ID:", listItem.dataset.tabId);
-            tabContentContainerElement.innerHTML = '<p>Error: Invalid tab ID.</p>';
+          // Try to load saved content for this URL first
+          const savedContent = await getPageContent(currentTabUrl);
+          if (savedContent) {
+            currentRawText = savedContent.rawText || '';
+            currentMarkdownText = savedContent.markdownText || '';
+            isMarkdownView = !!currentMarkdownText;
+            displayContent();
             isLoading = false;
             updateControlsVisibility();
-            return;
+          } else {
+            // If no saved content, fetch it from the page
+            chrome.scripting.executeScript(
+              {
+                target: { tabId: tabId },
+                func: () => document.body.innerText,
+              },
+              async (injectionResults) => {
+                isLoading = false;
+                if (chrome.runtime.lastError) {
+                  tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content. It might be a restricted page.</p>`;
+                  updateControlsVisibility();
+                  return;
+                }
+
+                if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
+                  const pageText = injectionResults[0].result;
+                  currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
+                  currentMarkdownText = ''; // Reset markdown on new content
+                  isMarkdownView = false;
+
+                  // Save the newly fetched content
+                  await savePageContent(currentTabUrl, { rawText: currentRawText, markdownText: currentMarkdownText });
+                  
+                  displayContent();
+                } else {
+                  tabContentContainerElement.innerHTML = '<p>Could not retrieve content from this tab.</p>';
+                  currentRawText = '';
+                  currentMarkdownText = '';
+                }
+                updateControlsVisibility();
+              }
+            );
           }
-
-          // 3. Inject a function to get the text content into the selected tab
-          // Manifest V3 uses chrome.scripting.executeScript
-          chrome.scripting.executeScript(
-            {
-              target: { tabId: tabId },
-              func: () => document.body.innerText,
-            },
-            (injectionResults) => {
-              isLoading = false; // Reset loading state
-              if (chrome.runtime.lastError) {
-                tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content from this tab. It might be a restricted page (e.g., chrome:// pages) or the extension lacks permission. Ensure 'host_permissions' in manifest.json includes this URL or is set to '<all_urls>'.</p>`;
-                updateControlsVisibility();
-                return;
-              }
-
-              if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
-                // 4. Store and display the retrieved text content
-                const pageText = injectionResults[0].result;
-                currentRawText = `Source URL: ${currentTabUrl}\n\n${pageText}`;
-                isMarkdownView = !!currentMarkdownText;
-
-                // Save to local storage
-                chrome.storage.local.set({
-                  lastRawText: currentRawText,
-                  lastTabUrl: currentTabUrl,
-                  isMarkdownView: isMarkdownView
-                });
-
-                displayContent();
-                updateControlsVisibility();
-
-              } else {
-                console.warn("Script injected, but no result received from content script.", injectionResults);
-                tabContentContainerElement.innerHTML = '<p>Could not retrieve content. The content script might not have executed correctly or returned no data.</p>';
-                currentRawText = '';
-                currentMarkdownText = '';
-                updateControlsVisibility();
-              }
-            }
-          );
         });
         tabsListElement.appendChild(listItem);
       });
@@ -709,21 +693,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   });
 });
-  // Store and retrieve markdown for a specific tab
-  async function saveMarkdownForTab(tabId, markdown) {
-    return new Promise((resolve) => {
-      const key = `markdown_${tabId}`;
-      chrome.storage.local.set({ [key]: markdown }, () => {
-        resolve();
-      });
-    });
-  }
-
-  async function getMarkdownForTab(tabId) {
-    return new Promise((resolve) => {
-      const key = `markdown_${tabId}`;
-      chrome.storage.local.get([key], (result) => {
-        resolve(result[key] || null);
-      });
-    });
-  }
+  // These functions are no longer needed as their logic is replaced by
+  // savePageContent and getPageContent from storage-utils.js

@@ -95,3 +95,39 @@ async function getCustomPrompts() {
     });
   });
 }
+
+/**
+ * Save page content to Chrome local storage, keyed by URL
+ * @param {string} url - The URL of the page
+ * @param {object} content - The content to store (e.g., { rawText: '...', isMarkdown: false })
+ * @returns {Promise<void>}
+ */
+async function savePageContent(url, content) {
+  return new Promise((resolve, reject) => {
+    const data = { [url]: content };
+    chrome.storage.local.set(data, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Retrieve page content from Chrome local storage by URL
+ * @param {string} url - The URL of the page
+ * @returns {Promise<object|null>} The stored content or null if not found
+ */
+async function getPageContent(url) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.local.get([url], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result[url] || null);
+      }
+    });
+  });
+}
