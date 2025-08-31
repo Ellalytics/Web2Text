@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const signInButton = document.getElementById('signInButton');
   const authStatus = document.getElementById('authStatus');
   const signOutButton = document.getElementById('signOutButton');
+  const clearStorageBtn = document.getElementById('clearStorageBtn');
+  const clearStorageStatus = document.getElementById('clearStorageStatus');
  
   const addPromptBtn = document.getElementById('addPromptBtn');
   const customPromptsList = document.getElementById('customPromptsList');
@@ -65,6 +67,23 @@ document.addEventListener('DOMContentLoaded', () => {
    settingsToggle.addEventListener('click', () => {
     settingsContent.classList.toggle('hidden');
   });
+
+  // Clear storage button: this will not clear saved API key or prompts as they are in chrome.store.sync.
+  clearStorageBtn.addEventListener('click', () => {
+    chrome.storage.local.clear(() => {
+      if (chrome.runtime.lastError) {
+        showClearStorageStatus(`Error: ${chrome.runtime.lastError.message}`, 'error');
+      } else {
+        showClearStorageStatus('Storage cleared successfully!', 'success');
+        // Optionally, refresh the view
+        currentRawText = '';
+        currentMarkdownText = '';
+        displayContent();
+        updateControlsVisibility();
+      }
+    });
+  });
+
 
   // Custom prompt management
   addPromptBtn.addEventListener('click', async () => {
@@ -429,6 +448,16 @@ document.addEventListener('DOMContentLoaded', () => {
         emailStatus.className = '';
       }, 3000);
     }
+  }
+
+  function showClearStorageStatus(message, type) {
+    clearStorageStatus.textContent = message;
+    clearStorageStatus.className = `status-message status-${type}`;
+
+    setTimeout(() => {
+      clearStorageStatus.textContent = '';
+      clearStorageStatus.className = 'status-message';
+    }, 3000);
   }
 
   function checkAuthStatus() {
