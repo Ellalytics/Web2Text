@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabsListElement = document.getElementById('tabsList');
   const tabContentContainerElement = document.getElementById('tabContentContainer');
   const copyButton = document.getElementById('copyButton');
-  const convertToMarkdownBtn = document.getElementById('convertToMarkdownBtn');
+  const aiConvertBtn = document.getElementById('aiConvertBtn');
   const viewToggleBtn = document.getElementById('viewToggleBtn');
   const emailMarkdownBtn = document.getElementById('emailMarkdownBtn');
   const emailRawTextBtn = document.getElementById('emailRawTextBtn');
@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const customPromptsList = document.getElementById('customPromptsList');
   const customPromptStatus = document.getElementById('customPromptStatus');
   const customPromptSelect = document.getElementById('customPromptSelect');
-  const convertWithCustomPromptBtn = document.getElementById('convertWithCustomPromptBtn');
 
    // State variables
    let currentRawText = '';
@@ -34,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTabUrl = '';
   let customPrompts = [];
   let isLoading = false;
+  let currentTabId = null;
 
   // Initialize the extension
   initializeExtension();
@@ -104,12 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderCustomPrompts() {
     customPromptsList.innerHTML = '';
-    customPromptSelect.innerHTML = '';
+    customPromptSelect.innerHTML = '<option value="default">Default</option>';
 
     if (customPrompts.length === 0) {
       customPromptsList.innerHTML = '<p>No custom prompts saved.</p>';
-      customPromptSelect.style.display = 'none';
-      convertWithCustomPromptBtn.style.display = 'none';
+      customPromptSelect.style.display = 'block'; // Always show with default
+      aiConvertBtn.style.display = 'block';
       return;
     }
 
@@ -138,13 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
       customPromptsList.appendChild(promptContainer);
 
       const option = document.createElement('option');
-      option.value = index;
+      option.value = index; // The index will be a string here
       option.textContent = prompt.name;
       customPromptSelect.appendChild(option);
     });
 
     customPromptSelect.style.display = 'block';
-    convertWithCustomPromptBtn.style.display = 'block';
+    aiConvertBtn.style.display = 'block';
   }
 
   function showEditPrompt(index) {
@@ -267,8 +267,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Convert to markdown button
-  convertToMarkdownBtn.addEventListener('click', async () => {
+  // AI Convert button
+  aiConvertBtn.addEventListener('click', async () => {
     if (!llmApiKey) {
       showStatus('Please save a valid API key first', 'error');
       return;
@@ -279,69 +279,42 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    convertToMarkdownBtn.disabled = true;
-    convertToMarkdownBtn.textContent = 'Converting...';
+    const selectedPromptValue = customPromptSelect.value;
+    let customPrompt = null;
+
+    if (selectedPromptValue !== 'default') {
+      const selectedPromptIndex = parseInt(selectedPromptValue, 10);
+      if (selectedPromptIndex >= 0 && selectedPromptIndex < customPrompts.length) {
+        customPrompt = customPrompts[selectedPromptIndex].content;
+      } else {
+        showStatus('Please select a valid prompt', 'error');
+        return;
+      }
+    }
+
+    aiConvertBtn.disabled = true;
+    aiConvertBtn.textContent = 'Converting...';
+    const conversionTabId = currentTabId; // Capture the tab ID at the start of conversion
 
     try {
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, null); // System prompt
-      showStatus('Content converted to markdown successfully', 'success');
-
-      // Switch to markdown view
-      isMarkdownView = true;
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveMarkdownForTab(activeTab.id, currentMarkdownText);
-      chrome.storage.local.set({ isMarkdownView: isMarkdownView });
-      displayContent();
-      updateControlsVisibility();
-
-    } catch (error) {
-      console.error('Error converting to markdown:', error);
-      showStatus('Error converting to markdown: ' + error.message, 'error');
-    } finally {
-      convertToMarkdownBtn.disabled = false;
-      convertToMarkdownBtn.textContent = 'Convert to Markdown';
-    }
-  });
-
-  convertWithCustomPromptBtn.addEventListener('click', async () => {
-    if (!llmApiKey) {
-      showStatus('Please save a valid API key first', 'error');
-      return;
-    }
-
-    if (!currentRawText) {
-      showStatus('No content to convert', 'error');
-      return;
-    }
-
-    const selectedPromptIndex = customPromptSelect.value;
-    if (selectedPromptIndex < 0 || selectedPromptIndex >= customPrompts.length) {
-      showStatus('Please select a valid prompt', 'error');
-      return;
-    }
-
-    convertWithCustomPromptBtn.disabled = true;
-    convertWithCustomPromptBtn.textContent = 'Converting...';
-
-    try {
-      const customPrompt = customPrompts[selectedPromptIndex].content;
       currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
+      await saveMarkdownForTab(conversionTabId, currentMarkdownText);
 
-      // Switch to markdown view
-      isMarkdownView = true;
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await saveMarkdownForTab(activeTab.id, currentMarkdownText);
-      chrome.storage.local.set({ isMarkdownView: isMarkdownView });
-      displayContent();
-      updateControlsVisibility();
+      // Only update the view if the user is still on the same tab
+      if (conversionTabId === currentTabId) {
+        isMarkdownView = true;
+        chrome.storage.local.set({ isMarkdownView: isMarkdownView });
+        displayContent();
+        updateControlsVisibility();
+      }
 
     } catch (error) {
       console.error('Error converting to markdown:', error);
       showStatus('Error converting to markdown: ' + error.message, 'error');
     } finally {
-      convertWithCustomPromptBtn.disabled = false;
-      convertWithCustomPromptBtn.textContent = 'Convert with Prompt';
+      aiConvertBtn.disabled = false;
+      aiConvertBtn.textContent = 'AI Convert';
     }
   });
 
@@ -549,7 +522,8 @@ document.addEventListener('DOMContentLoaded', () => {
       viewToggleBtn.style.display = 'none';
       emailMarkdownBtn.style.display = 'none';
       emailRawTextBtn.style.display = 'none';
-      convertToMarkdownBtn.style.display = 'none';
+      aiConvertBtn.style.display = 'none';
+      customPromptSelect.style.display = 'none';
       return;
     }
 
@@ -561,7 +535,9 @@ document.addEventListener('DOMContentLoaded', () => {
     viewToggleBtn.style.display = hasMarkdown ? 'block' : 'none';
     emailMarkdownBtn.style.display = hasMarkdown ? 'block' : 'none';
     emailRawTextBtn.style.display = hasContent ? 'block' : 'none';
-    convertToMarkdownBtn.style.display = (hasContent && hasApiKey) ? 'block' : 'none';
+    const showAiControls = hasContent && hasApiKey;
+    aiConvertBtn.style.display = showAiControls ? 'block' : 'none';
+    customPromptSelect.style.display = showAiControls ? 'block' : 'none';
 
     if (hasMarkdown) {
       copyButton.textContent = isMarkdownView ? 'Copy Markdown' : 'Copy Raw Text';
@@ -629,6 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Add a click event listener to each tab item
         listItem.addEventListener('click', async () => {
           const tabId = parseInt(listItem.dataset.tabId, 10);
+          currentTabId = tabId; // Store the current tab ID
 
           // Make the clicked tab active
           chrome.tabs.update(tabId, { active: true });

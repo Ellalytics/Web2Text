@@ -9,7 +9,7 @@ const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/mo
  * @param {string} [customPrompt] - An optional custom prompt to append
  * @returns {Promise<string>} The converted markdown content
  */
-async function convertTextToMarkdown(text, apiKey, customPrompt = '') {
+async function convertTextToMarkdown(text, apiKey, customPrompt = null) {
   if (!text || !apiKey) {
     throw new Error('Text content and API key are required');
   }
@@ -63,8 +63,8 @@ async function convertTextToMarkdown(text, apiKey, customPrompt = '') {
  * @param {string} [customPrompt] - An optional custom prompt to append
  * @returns {string} The formatted prompt
  */
-function createMarkdownConversionPrompt(text, customPrompt = '') {
-  let prompt = `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
+function createMarkdownConversionPrompt(text, customPrompt = null) {
+  let systemPrompt = `You are an expert content processor. Your task is to convert the following web page text into clean, structured markdown format.
 
 INSTRUCTIONS:
 1. Output the source URL in the beginning as a markdown link "[Source URL](<URL>)"
@@ -79,9 +79,11 @@ INSTRUCTIONS:
 10. Keep only the essential, valuable content that a reader would want
 11. In the end, add a "CTA in this page" section to include important call to actions, such as "View Fees", "Enroll Now", "Read More", etc.`;
 
+  let prompt;
   if (customPrompt && customPrompt.trim().length > 0) {
-    // The custom prompt should replace the system prompt, not be added to it.
     prompt = customPrompt;
+  } else {
+    prompt = systemPrompt;
   }
 
   prompt += `
