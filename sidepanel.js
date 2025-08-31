@@ -469,9 +469,21 @@ document.addEventListener('DOMContentLoaded', () => {
   function checkAuthStatus() {
     chrome.identity.getAuthToken({ interactive: false }, (token) => {
       if (token) {
-        signInButton.style.display = 'none';
-        signOutButton.style.display = 'block';
-        showAuthStatus('Signed in.', 'success');
+        fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        .then(response => response.json())
+        .then(userInfo => {
+          signInButton.style.display = 'none';
+          signOutButton.style.display = 'block';
+          showAuthStatus(`Signed in. Email will be sent to: ${userInfo.email}`, 'success');
+        })
+        .catch(error => {
+          console.error('Error fetching user info:', error);
+          showAuthStatus('Signed in, but could not fetch email.', 'warning');
+        });
       } else {
         signInButton.style.display = 'block';
         signOutButton.style.display = 'none';
