@@ -80,7 +80,8 @@ INSTRUCTIONS:
 11. In the end, add a "CTA in this page" section to include important call to actions, such as "View Fees", "Enroll Now", "Read More", etc.`;
 
   if (customPrompt && customPrompt.trim().length > 0) {
-    prompt += `\n\nADDITIONAL INSTRUCTIONS:\n${customPrompt}`;
+    // The custom prompt should replace the system prompt, not be added to it.
+    prompt = customPrompt;
   }
 
   prompt += `

@@ -226,12 +226,17 @@
       </div>
       <div id="apiKeyStatus"></div>
       <hr style="margin-top: 15px; margin-bottom: 10px;">
-      <label for="customPromptInput" style="font-size: 12px; display: block; margin-bottom: 4px;">
-        Custom Prompt:
-      </label>
-      <textarea id="customPromptInput" placeholder="Enter your custom prompt here" style="width: 100%; min-height: 60px; font-size: 12px;"></textarea>
-      <div>
-        <button id="saveCustomPromptBtn">Save Prompt</button>
+      <h2>Custom Prompts</h2>
+      <div id="promptsManagement">
+        <div id="addPromptContainer">
+          <h3>Add New Prompt</h3>
+          <input type="text" id="promptNameInput" placeholder="Prompt Name" style="width: 100%; margin-bottom: 4px;">
+          <textarea id="promptContentInput" placeholder="Prompt Content" style="width: 100%; min-height: 60px; font-size: 12px;"></textarea>
+          <button id="addPromptBtn">Add Prompt</button>
+        </div>
+        <hr style="margin-top: 15px; margin-bottom: 10px;">
+        <h3>Saved Prompts</h3>
+        <div id="customPromptsList"></div>
       </div>
       <div id="customPromptStatus" class="status-message"></div>
       <hr style="margin-top: 15px; margin-bottom: 10px;">
@@ -253,6 +258,8 @@
     <button id="copyButton" style="display: none;">Copy Text</button>
     <button id="emailRawTextBtn" style="display: none;">Email Raw Text</button>
     <button id="convertToMarkdownBtn" style="display: none;">Convert to Markdown</button>
+    <select id="customPromptSelect" style="display: none;"></select>
+    <button id="convertWithCustomPromptBtn" style="display: none;">Convert with Prompt</button>
     <button id="viewToggleBtn" style="display: none;">View Markdown</button>
     <button id="emailMarkdownBtn" style="display: none;">Email markdown to myself</button>
   </div>

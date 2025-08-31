@@ -64,13 +64,13 @@ function validateApiKeyFormat(apiKey) {
 }
 
 /**
- * Save custom prompt to Chrome storage
- * @param {string} prompt - The custom prompt to store
+ * Save custom prompts to Chrome storage
+ * @param {Array<Object>} prompts - The custom prompts to store
  * @returns {Promise<void>}
  */
-async function saveCustomPrompt(prompt) {
+async function saveCustomPrompts(prompts) {
   return new Promise((resolve, reject) => {
-    chrome.storage.sync.set({ customPrompt: prompt }, () => {
+    chrome.storage.sync.set({ customPrompts: prompts }, () => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
       } else {
@@ -81,16 +81,16 @@ async function saveCustomPrompt(prompt) {
 }
 
 /**
- * Retrieve custom prompt from Chrome storage
- * @returns {Promise<string|null>} The stored custom prompt or null if not found
+ * Retrieve custom prompts from Chrome storage
+ * @returns {Promise<Array<Object>>} The stored custom prompts or an empty array if not found
  */
-async function getCustomPrompt() {
+async function getCustomPrompts() {
   return new Promise((resolve, reject) => {
-    chrome.storage.sync.get(['customPrompt'], (result) => {
+    chrome.storage.sync.get(['customPrompts'], (result) => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
       } else {
-        resolve(result.customPrompt || null);
+        resolve(result.customPrompts || []);
       }
     });
   });

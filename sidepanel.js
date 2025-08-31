@@ -20,9 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const authStatus = document.getElementById('authStatus');
   const signOutButton = document.getElementById('signOutButton');
  
-  const customPromptInput = document.getElementById('customPromptInput');
-  const saveCustomPromptBtn = document.getElementById('saveCustomPromptBtn');
+  const addPromptBtn = document.getElementById('addPromptBtn');
+  const customPromptsList = document.getElementById('customPromptsList');
   const customPromptStatus = document.getElementById('customPromptStatus');
+  const customPromptSelect = document.getElementById('customPromptSelect');
+  const convertWithCustomPromptBtn = document.getElementById('convertWithCustomPromptBtn');
 
    // State variables
    let currentRawText = '';
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMarkdownView = false;
   let llmApiKey = null;
   let currentTabUrl = '';
-  let customPrompt = '';
+  let customPrompts = [];
   let isLoading = false;
 
   // Initialize the extension
@@ -45,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
         apiKeyInput.value = llmApiKey;
         showStatus('API key loaded', 'success');
       }
+
+      // Load custom prompts
+      customPrompts = await getCustomPrompts();
+      renderCustomPrompts();
 
       // Load last content
       chrome.storage.local.get(['lastRawText', 'lastTabUrl', 'isMarkdownView'], (result) => {
@@ -71,17 +77,96 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsContent.classList.toggle('hidden');
   });
 
-  // Save custom prompt
-  saveCustomPromptBtn.addEventListener('click', async () => {
-    const prompt = customPromptInput.value.trim();
-    try {
-      await saveCustomPrompt(prompt);
-      customPrompt = prompt;
-      showCustomPromptStatus('Prompt saved successfully', 'success');
-    } catch (error) {
-      showCustomPromptStatus('Error saving prompt: ' + error.message, 'error');
+  // Custom prompt management
+  addPromptBtn.addEventListener('click', async () => {
+    const name = document.getElementById('promptNameInput').value.trim();
+    const content = document.getElementById('promptContentInput').value.trim();
+
+    if (!name || !content) {
+      showCustomPromptStatus('Prompt name and content are required', 'error');
+      return;
     }
+
+    customPrompts.push({ name, content });
+    await saveCustomPrompts(customPrompts);
+    showCustomPromptStatus('Prompt added successfully', 'success');
+    renderCustomPrompts();
+    document.getElementById('promptNameInput').value = '';
+    document.getElementById('promptContentInput').value = '';
   });
+
+  async function deletePrompt(index) {
+    customPrompts.splice(index, 1);
+    await saveCustomPrompts(customPrompts);
+    showCustomPromptStatus('Prompt deleted successfully', 'success');
+    renderCustomPrompts();
+  }
+
+  function renderCustomPrompts() {
+    customPromptsList.innerHTML = '';
+    customPromptSelect.innerHTML = '';
+
+    if (customPrompts.length === 0) {
+      customPromptsList.innerHTML = '<p>No custom prompts saved.</p>';
+      customPromptSelect.style.display = 'none';
+      convertWithCustomPromptBtn.style.display = 'none';
+      return;
+    }
+
+    customPrompts.forEach((prompt, index) => {
+      const promptContainer = document.createElement('div');
+      promptContainer.className = 'prompt-item';
+
+      const promptName = document.createElement('h4');
+      promptName.textContent = prompt.name;
+      promptContainer.appendChild(promptName);
+
+      const promptContent = document.createElement('p');
+      promptContent.textContent = prompt.content;
+      promptContainer.appendChild(promptContent);
+
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => showEditPrompt(index));
+      promptContainer.appendChild(editBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deletePrompt(index));
+      promptContainer.appendChild(deleteBtn);
+
+      customPromptsList.appendChild(promptContainer);
+
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = prompt.name;
+      customPromptSelect.appendChild(option);
+    });
+
+    customPromptSelect.style.display = 'block';
+    convertWithCustomPromptBtn.style.display = 'block';
+  }
+
+  function showEditPrompt(index) {
+    const prompt = customPrompts[index];
+    const promptContainer = customPromptsList.children[index];
+    promptContainer.innerHTML = `
+      <input type="text" value="${prompt.name}" style="width: 100%; margin-bottom: 4px;">
+      <textarea style="width: 100%; min-height: 60px; font-size: 12px;">${prompt.content}</textarea>
+      <button>Save</button>
+      <button>Cancel</button>
+    `;
+    promptContainer.querySelector('button').addEventListener('click', () => {
+      const newName = promptContainer.querySelector('input').value.trim();
+      const newContent = promptContainer.querySelector('textarea').value.trim();
+      if (newName && newContent) {
+        customPrompts[index] = { name: newName, content: newContent };
+        saveCustomPrompts(customPrompts);
+        renderCustomPrompts();
+      }
+    });
+    promptContainer.querySelectorAll('button')[1].addEventListener('click', renderCustomPrompts);
+  }
 
   // Sign in button
   signInButton.addEventListener('click', () => {
@@ -198,8 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     convertToMarkdownBtn.textContent = 'Converting...';
 
     try {
-      const customPrompt = await getCustomPrompt();
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
+      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, null); // System prompt
       showStatus('Content converted to markdown successfully', 'success');
 
       // Switch to markdown view
@@ -216,6 +300,48 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       convertToMarkdownBtn.disabled = false;
       convertToMarkdownBtn.textContent = 'Convert to Markdown';
+    }
+  });
+
+  convertWithCustomPromptBtn.addEventListener('click', async () => {
+    if (!llmApiKey) {
+      showStatus('Please save a valid API key first', 'error');
+      return;
+    }
+
+    if (!currentRawText) {
+      showStatus('No content to convert', 'error');
+      return;
+    }
+
+    const selectedPromptIndex = customPromptSelect.value;
+    if (selectedPromptIndex < 0 || selectedPromptIndex >= customPrompts.length) {
+      showStatus('Please select a valid prompt', 'error');
+      return;
+    }
+
+    convertWithCustomPromptBtn.disabled = true;
+    convertWithCustomPromptBtn.textContent = 'Converting...';
+
+    try {
+      const customPrompt = customPrompts[selectedPromptIndex].content;
+      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
+      showStatus('Content converted to markdown successfully', 'success');
+
+      // Switch to markdown view
+      isMarkdownView = true;
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await saveMarkdownForTab(activeTab.id, currentMarkdownText);
+      chrome.storage.local.set({ isMarkdownView: isMarkdownView });
+      displayContent();
+      updateControlsVisibility();
+
+    } catch (error) {
+      console.error('Error converting to markdown:', error);
+      showStatus('Error converting to markdown: ' + error.message, 'error');
+    } finally {
+      convertWithCustomPromptBtn.disabled = false;
+      convertWithCustomPromptBtn.textContent = 'Convert with Prompt';
     }
   });
 
