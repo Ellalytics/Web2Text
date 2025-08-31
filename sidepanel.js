@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let customPrompts = [];
   let isLoading = false;
   let currentTabId = null;
+  let currentTabUrl = '';
 
   // Initialize the extension
   initializeExtension();
