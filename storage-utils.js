@@ -50,20 +50,6 @@ async function removeApiKey() {
 }
 
 /**
- * Validate API key format (basic validation)
- * @param {string} apiKey - The API key to validate
- * @returns {boolean} True if the API key format appears valid
- */
-function validateApiKeyFormat(apiKey) {
-  if (!apiKey || typeof apiKey !== 'string') {
-    return false;
-  }
-  
-  // Basic validation: should start with 'AIza' and be at least 35 characters
-  return apiKey.startsWith('AIza') && apiKey.length >= 35;
-}
-
-/**
  * Save custom prompts to Chrome storage
  * @param {Array<Object>} prompts - The custom prompts to store
  * @returns {Promise<void>}
@@ -127,6 +113,39 @@ async function getPageContent(url) {
         reject(new Error(chrome.runtime.lastError.message));
       } else {
         resolve(result[url] || null);
+      }
+    });
+  });
+}
+
+/**
+ * Save LLM API Endpoint to Chrome storage
+ * @param {string} llmApiEndpoint - The LLM API Endpoint to store
+ * @returns {Promise<void>}
+ */
+async function saveLlmApiEndpoint(llmApiEndpoint) {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.set({ llmApiEndpoint: llmApiEndpoint }, () => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Retrieve LLM API Endpoint from Chrome storage
+ * @returns {Promise<string|null>} The stored LLM API Endpoint or null if not found
+ */
+async function getLlmApiEndpoint() {
+  return new Promise((resolve, reject) => {
+    chrome.storage.sync.get(['llmApiEndpoint'], (result) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(result.llmApiEndpoint || null);
       }
     });
   });

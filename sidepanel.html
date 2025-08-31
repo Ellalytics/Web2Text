@@ -226,9 +226,13 @@
         Gemini API Key:
       </label>
       <input type="password" id="apiKeyInput" placeholder="Enter your Gemini API key (AIza...)">
+      <label for="llmApiEndpointInput" style="font-size: 12px; display: block; margin-bottom: 4px; margin-top: 8px;">
+        LLM API Endpoint:
+      </label>
+      <input type="text" id="llmApiEndpointInput" placeholder="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" style="width: 100%; margin-bottom: 4px;">
       <div>
-        <button id="saveApiKeyBtn">Save</button>
-        <button id="testApiKeyBtn">Test</button>
+        <button id="saveApiKeyBtn">Save Settings</button>
+        <button id="testApiKeyBtn">Test Connection</button>
       </div>
       <div id="apiKeyStatus"></div>
       <hr style="margin-top: 15px; margin-bottom: 10px;">

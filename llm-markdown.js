@@ -1,23 +1,25 @@
 // llm-markdown.js - Gemini API service for text-to-markdown conversion
 
-const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const DEFAULT_LLM_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /**
  * Convert plain text to structured markdown using Gemini API
  * @param {string} text - The plain text content to convert
  * @param {string} apiKey - The Gemini API key
+ * @param {string} llmApiEndpoint - The LLM API Endpoint
  * @param {string} [customPrompt] - An optional custom prompt to append
  * @returns {Promise<string>} The converted markdown content
  */
-async function convertTextToMarkdown(text, apiKey, customPrompt = null) {
+async function convertTextToMarkdown(text, apiKey, llmApiEndpoint, customPrompt = null) {
   if (!text || !apiKey) {
     throw new Error('Text content and API key are required');
   }
 
   const prompt = createMarkdownConversionPrompt(text, customPrompt);
+  const url = llmApiEndpoint || DEFAULT_LLM_API_ENDPOINT;
 
   try {
-    const response = await fetch(`${GEMINI_API_BASE_URL}?key=${apiKey}`, {
+    const response = await fetch(`${url}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -100,11 +102,13 @@ Please provide only the clean markdown content without any explanations or meta-
 /**
  * Test API key validity by making a simple request
  * @param {string} apiKey - The API key to test
+ * @param {string} llmApiEndpoint - The LLM API Endpoint
  * @returns {Promise<boolean>} True if the API key is valid
  */
-async function testApiKey(apiKey) {
+async function testApiKey(apiKey, llmApiEndpoint) {
+  const url = llmApiEndpoint || DEFAULT_LLM_API_ENDPOINT;
   try {
-    const response = await fetch(`${GEMINI_API_BASE_URL}?key=${apiKey}`, {
+    const response = await fetch(`${url}?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

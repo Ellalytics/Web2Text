@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
    const settingsToggle = document.getElementById('settingsToggle');
   const settingsContent = document.getElementById('settingsContent');
   const apiKeyInput = document.getElementById('apiKeyInput');
+  const llmApiEndpointInput = document.getElementById('llmApiEndpointInput');
   const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
   const testApiKeyBtn = document.getElementById('testApiKeyBtn');
   const apiKeyStatus = document.getElementById('apiKeyStatus');
@@ -32,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentMarkdownText = '';
   let isMarkdownView = false;
   let llmApiKey = null;
+  let llmApiEndpoint = null;
   let customPrompts = [];
   let isLoading = false;
   let isConverting = false;
@@ -45,10 +47,17 @@ document.addEventListener('DOMContentLoaded', () => {
   async function initializeExtension() {
     try {
       // Load saved API key
+      // Load saved API key
       llmApiKey = await getApiKey();
       if (llmApiKey) {
         apiKeyInput.value = llmApiKey;
         showStatus('API key loaded', 'success');
+      }
+
+      // Load saved LLM API Endpoint
+      llmApiEndpoint = await getLlmApiEndpoint();
+      if (llmApiEndpoint) {
+        llmApiEndpointInput.value = llmApiEndpoint;
       }
 
       // Load custom prompts
@@ -214,48 +223,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save API key
   saveApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
+    const llmApiEndpoint = llmApiEndpointInput.value.trim();
 
     if (!apiKey) {
       showStatus('Please enter an API key', 'error');
       return;
     }
 
-    if (!validateApiKeyFormat(apiKey)) {
-      showStatus('Invalid API key format. Should start with "AIza" and be at least 35 characters.', 'error');
-      return;
-    }
-
     try {
       await saveApiKey(apiKey);
       llmApiKey = apiKey;
-      showStatus('API key saved successfully', 'success');
+      if (llmApiEndpoint) {
+        await saveLlmApiEndpoint(llmApiEndpoint);
+      }
+      showStatus('Settings saved successfully', 'success');
       updateControlsVisibility();
     } catch (error) {
-      showStatus('Error saving API key: ' + error.message, 'error');
+      showStatus('Error saving settings: ' + error.message, 'error');
     }
   });
 
   // Test API key
   testApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyInput.value.trim();
+    const llmApiEndpoint = llmApiEndpointInput.value.trim();
 
     if (!apiKey) {
       showStatus('Please enter an API key to test', 'error');
       return;
     }
 
-    showStatus('Testing API key...', 'success');
+    showStatus('Testing connection...', 'success');
     testApiKeyBtn.disabled = true;
 
     try {
-      const isValid = await testApiKey(apiKey);
+      const isValid = await testApiKey(apiKey, llmApiEndpoint);
       if (isValid) {
-        showStatus('API key is valid!', 'success');
+        showStatus('Connection successful!', 'success');
       } else {
-        showStatus('API key test failed. Please check your key.', 'error');
+        showStatus('Connection test failed. Please check your key and endpoint.', 'error');
       }
     } catch (error) {
-      showStatus('Error testing API key: ' + error.message, 'error');
+      showStatus('Error testing connection: ' + error.message, 'error');
     } finally {
       testApiKeyBtn.disabled = false;
     }
@@ -308,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const conversionTabUrl = currentTabUrl; // Capture the tab URL at the start of conversion
 
     try {
-      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
+      currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, llmApiEndpoint, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
       // Save the new markdown content along with the raw text
       await savePageContent(conversionTabUrl, {
