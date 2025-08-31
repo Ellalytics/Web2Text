@@ -283,12 +283,13 @@ document.addEventListener('DOMContentLoaded', () => {
     aiConvertBtn.disabled = true;
     aiConvertBtn.textContent = 'Converting...';
     const conversionTabId = currentTabId; // Capture the tab ID at the start of conversion
+    const conversionTabUrl = currentTabUrl; // Capture the tab URL at the start of conversion
 
     try {
       currentMarkdownText = await convertTextToMarkdown(currentRawText, llmApiKey, customPrompt);
       showStatus('Content converted to markdown successfully', 'success');
       // Save the new markdown content along with the raw text
-      await savePageContent(currentTabUrl, {
+      await savePageContent(conversionTabUrl, {
         rawText: currentRawText,
         markdownText: currentMarkdownText
       });
