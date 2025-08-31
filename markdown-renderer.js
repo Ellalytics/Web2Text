@@ -38,8 +38,13 @@ function renderMarkdownToHtml(markdown) {
   html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
 
   // Wrap consecutive list items in ul/ol tags
-  html = html.replace(/(<li>.*<\/li>)/gs, (match) => {
-    return '<ul>' + match + '</ul>';
+  html = html.replace(/((?:<li>.*<\/li>\s*)+)/g, (match) => {
+    // Trim trailing whitespace from the match to avoid including it in the <ul>
+    const trimmedMatch = match.trim();
+    if (trimmedMatch) {
+      return '<ul>' + trimmedMatch + '</ul>';
+    }
+    return '';
   });
 
   // Convert line breaks to paragraphs
@@ -74,6 +79,11 @@ function applyMarkdownStyling(container) {
   container.style.fontFamily = 'system-ui, -apple-system, sans-serif';
   container.style.lineHeight = '1.6';
   container.style.color = '#333';
+
+  // Reset padding for all direct children to avoid inheritance issues
+  for (const child of container.children) {
+    child.style.paddingLeft = '0';
+  }
 
   // Style headers
   const headers = container.querySelectorAll('h1, h2, h3, h4, h5, h6');
