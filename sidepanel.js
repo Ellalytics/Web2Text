@@ -580,114 +580,107 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function updateTabsList() {
-    chrome.tabs.query({ currentWindow: true }, (tabs) => {
+  async function updateTabsList() {
+    // Save the current scroll position
+    const scrollPosition = tabsListElement.scrollTop;
+
+    chrome.tabs.query({ currentWindow: true }, async (tabs) => {
       if (chrome.runtime.lastError) {
         console.error("Error querying tabs:", chrome.runtime.lastError.message);
         tabsListElement.innerHTML = '<li>Error loading tabs.</li>';
         return;
       }
-
+  
       tabsListElement.innerHTML = '';
-
+  
       if (tabs.length === 0) {
         tabsListElement.innerHTML = '<li>No tabs open in the current window.</li>';
         return;
       }
-
-      tabs.forEach((tab) => {
-        // Create a list item for each tab
+  
+      // Fetch saved content for all tabs in parallel to check for markdown
+      const contentChecks = tabs.map(tab => getPageContent(tab.url));
+      const savedContents = await Promise.all(contentChecks);
+  
+      tabs.forEach((tab, index) => {
+        const savedContent = savedContents[index];
+        const hasMarkdown = savedContent && savedContent.markdownText;
+  
         const listItem = document.createElement('li');
-        listItem.dataset.tabId = tab.id; // Store tabId for later use
-
+        listItem.dataset.tabId = tab.id;
+  
         if (tab.active) {
           listItem.style.color = 'red';
           listItem.style.fontWeight = 'bold';
         }
-
-        // Create an element to display the title
+  
         const titleElement = document.createElement('span');
         titleElement.className = 'tab-title';
-        titleElement.textContent = tab.title || 'Untitled Tab';
-
-        // Create an element to display the URL
+        titleElement.textContent = `${tab.title || 'Untitled Tab'}${hasMarkdown ? ' ✨' : ''}`;
+  
         const urlElement = document.createElement('span');
         urlElement.className = 'tab-url';
         urlElement.textContent = tab.url || 'No URL';
-
+  
         listItem.appendChild(titleElement);
         listItem.appendChild(urlElement);
-
-        // 2. Add a click event listener to each tab item
+  
         listItem.addEventListener('click', async () => {
           const tabId = parseInt(listItem.dataset.tabId, 10);
-          currentTabId = tabId; // Store the current tab ID
-
-          // Make the clicked tab active
+          currentTabId = tabId;
+  
           chrome.tabs.update(tabId, { active: true });
-
-          // Update the styling of the tabs in the list
+  
           document.querySelectorAll('#tabsList li').forEach(item => {
-            if (parseInt(item.dataset.tabId, 10) === tabId) {
-              item.style.color = 'red';
-              item.style.fontWeight = 'bold';
-            } else {
-              item.style.color = '';
-              item.style.fontWeight = '';
-            }
+            const itemId = parseInt(item.dataset.tabId, 10);
+            item.style.color = itemId === tabId ? 'red' : '';
+            item.style.fontWeight = itemId === tabId ? 'bold' : '';
           });
-
-          // Set loading state and update UI
+  
           isLoading = true;
           updateControlsVisibility();
           tabContentContainerElement.innerHTML = '<p>Loading content...</p>';
-
+  
           const clickedTab = tabs.find(t => t.id === tabId);
           const tabUrl = clickedTab ? clickedTab.url : '';
           currentTabUrl = tabUrl;
-
-          // Try to load saved content for this URL first
-          // We no longer save raw text, only markdown.
-          const savedContent = await getPageContent(tabUrl);
-          
-          // Always fetch the latest raw text from the page.
+  
+          const latestSavedContent = await getPageContent(tabUrl);
+  
           chrome.scripting.executeScript(
             {
               target: { tabId: tabId },
               func: () => document.body.innerText,
             },
             (injectionResults) => {
-              // Only update the UI if the user is still on the same tab
-              if (tabId !== currentTabId) {
-                return;
-              }
-
+              if (tabId !== currentTabId) return;
+  
               isLoading = false;
               if (chrome.runtime.lastError) {
                 tabContentContainerElement.innerHTML = `<p>Error: Could not retrieve content. It might be a restricted page.</p>`;
                 currentRawText = '';
-                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
-                updateControlsVisibility();
-                return;
-              }
-
-              if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
+                currentMarkdownText = (latestSavedContent && latestSavedContent.markdownText) || '';
+              } else if (injectionResults && injectionResults.length > 0 && injectionResults[0].result) {
                 const pageText = injectionResults[0].result;
                 currentRawText = `Source URL: ${tabUrl}\n\n${pageText}`;
-                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
-                isMarkdownView = !!currentMarkdownText; // View markdown if it exists
+                currentMarkdownText = (latestSavedContent && latestSavedContent.markdownText) || '';
+                isMarkdownView = !!currentMarkdownText;
                 displayContent();
               } else {
                 tabContentContainerElement.innerHTML = '<p>Could not retrieve content from this tab.</p>';
                 currentRawText = '';
-                currentMarkdownText = (savedContent && savedContent.markdownText) || '';
+                currentMarkdownText = (latestSavedContent && latestSavedContent.markdownText) || '';
               }
               updateControlsVisibility();
+              updateTabsList();
             }
           );
         });
         tabsListElement.appendChild(listItem);
       });
+
+      // Restore the scroll position
+      tabsListElement.scrollTop = scrollPosition;
     });
   }
 
@@ -698,7 +691,9 @@ document.addEventListener('DOMContentLoaded', () => {
   chrome.tabs.onCreated.addListener(updateTabsList);
   chrome.tabs.onRemoved.addListener(updateTabsList);
   chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.title || changeInfo.url) {
+    // Update the list if the title, URL, or status changes.
+    // 'status' change often indicates content has loaded.
+    if (changeInfo.title || changeInfo.url || changeInfo.status === 'complete') {
       updateTabsList();
     }
   });
